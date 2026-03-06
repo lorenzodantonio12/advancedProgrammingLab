@@ -1,0 +1,39 @@
+from models import AutomationRule, StandardFormat
+import sqlite3
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+
+
+db = str(BASE_DIR / "mars_rules.db")
+
+def get_rules():
+    with sqlite3.connect(db) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute("""SELECT * from rules""")
+        results = cursor.fetchall()
+
+        return [AutomationRule(**dict(row)) for row in results]
+    
+
+def create_rule(rule: AutomationRule):
+    with sqlite3.connect(db) as conn:
+        cursor = conn.cursor()
+
+        params = (rule.sensor_name, rule.operator, rule.value, rule.metric, rule.actuator_name, rule.state)
+
+        cursor.execute("""INSERT INTO rules (sensor_name, operator, value, metric, actuator_name, state) VALUES (?, ?, ?, ?, ?, ?)""", params)
+
+        conn.commit()
+
+        return cursor.lastrowid
+    
+def delete_rule(id_rule: int):
+    with sqlite3.connect(db) as conn:
+        cursor = conn.cursor()
+
+        cursor.execute("""DELETE FROM rules WHERE id_rule=?""", (id_rule,))
+
+        conn.commit()
