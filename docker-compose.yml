@@ -1,0 +1,34 @@
+services:
+  # Servizio 1: Polling dei sensori REST
+  rest-poller:
+    build: ./ingestion
+    platform: linux/amd64
+    command: ["python", "-u", "rest_poller.py"] # Sovrascrive il CMD del Dockerfile
+    depends_on:
+      - simulator
+      - activemq
+
+  # Servizio 2: Ascolto dello Stream SSE
+  stream-subscriber:
+    build: ./ingestion
+    platform: linux/amd64
+    command: ["python", "-u", "stream_subscriber.py"] # Lancia lo stream
+    depends_on:
+      - simulator
+      - activemq
+
+  simulator:
+    image: mars-iot-simulator:latest
+    platform: linux/amd64
+    ports:
+      - "8080:8080"
+
+  activemq:
+    image: apache/activemq-classic:latest
+    platform: linux/amd64
+    ports:
+      - "61613:61613"
+      - "8161:8161"
+    environment:
+      - ACTIVEMQ_ADMIN_USER=admin
+      - ACTIVEMQ_ADMIN_PASSWORD=admin

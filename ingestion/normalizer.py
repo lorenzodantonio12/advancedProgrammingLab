@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel
+import json
+from datetime import datetime
 
 # Definiamo lo schema che avete concordato nel team [cite: 72]
 class StandardFormat(BaseModel):
@@ -53,3 +55,8 @@ def map_to_standard(sensor_id: str, raw_data: dict, schema_family: str) -> Stand
         origin=schema_family,
         status="OK"
     )
+
+def to_json(data: StandardFormat) -> str:
+    # Trasforma l'oggetto Pydantic in una stringa JSON
+    # Usiamo isoformat per la data così il Member 2 non impazzisce a leggerla
+    return data.model_dump_json()

@@ -1,11 +1,11 @@
 import requests
 import time
 from normalizer import map_to_standard
+from broker_client import BrokerClient
 
-# L'URL base del simulatore che hai appena testato [cite: 32]
-BASE_URL = "http://localhost:8080/api/sensors"
+# Nota: dentro Docker il simulatore si chiamerà 'simulator'
+BASE_URL = "http://simulator:8080/api/sensors"
 
-# Lista completa degli 8 sensori con le loro famiglie di schema [cite: 41]
 SENSORS_TO_POLL = [
     ("greenhouse_temperature", "rest.scalar.v1"),
     ("entrance_humidity", "rest.scalar.v1"),
@@ -18,30 +18,27 @@ SENSORS_TO_POLL = [
 ]
 
 def start_polling():
-    print("Avvio del servizio di Polling REST... [Mission Mars 2036]")
-    
+    # Inizializziamo il broker puntando al nome del servizio nel compose
+    broker = BrokerClient(host='activemq') 
+    broker.connect()
+
     while True:
         for sensor_id, schema in SENSORS_TO_POLL:
             try:
-                # 1. Richiesta al simulatore [cite: 37, 40]
                 response = requests.get(f"{BASE_URL}/{sensor_id}")
-                
                 if response.status_code == 200:
-                    raw_payload = response.json()
+                    standard_data = map_to_standard(sensor_id, response.json(), schema)
                     
-                    # 2. Trasformazione usando il tuo Normalizer
-                    standard_data = map_to_standard(sensor_id, raw_payload, schema)
+                    # 1. Stampa per controllo (come richiesto)
+                    print(f"NORMALIZED: {standard_data.id} = {standard_data.value}")
                     
-                    # 3. Stampa il risultato (per ora lo vediamo solo a terminale)
-                    print(f"ID: {standard_data.id} | Valore: {standard_data.value} {standard_data.unit}")
-                else:
-                    print(f"Errore {response.status_code} per il sensore {sensor_id}")
+                    # 2. Invio al broker
+                    broker.send_message("mars_telemetry", standard_data.model_dump_json())
 
             except Exception as e:
-                print(f"Connessione fallita per {sensor_id}: {e}")
+                print(f"Errore su {sensor_id}: {e}")
         
-        # Attesa di 5 secondi come da requisiti 
-        print("-" * 30)
+        print("-" * 50)
         time.sleep(5)
 
 if __name__ == "__main__":
