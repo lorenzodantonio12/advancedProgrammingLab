@@ -7,36 +7,45 @@ from components.telemetry_widget import TelemetryWidget
 from components.sensor_chart import SingleChartFactory
 from services.api import (
     get_latest_sensor_data, get_initial_actuators_state, 
-    get_telemetry_stream_mock, get_rules, get_next_push_event
+    get_rules, get_next_push_event
 )
 
-
 def extract_telemetry_data(t_data):
+    """Estrae i dati in un formato dizionario SEMPLICE: {Etichetta: Valore}"""
     ui_data = {}
-    if "power_kw" in t_data:
-        ui_data["Power"] = f"{t_data['power_kw']} kW"
-        ui_data["Voltage"] = f"{t_data['voltage_v']} V"
+    
+    # Se è il formato StandardFormat (id, metric, value, unit)
+    if all(k in t_data for k in ['metric', 'value']):
+        label = t_data["metric"].replace('_', ' ').title()
+        unit = t_data.get('unit', '')
+        ui_data[label] = f"{t_data['value']} {unit}".strip()
+        
+    # Se è il formato con misure multiple (measurements: [...])
     elif "measurements" in t_data:
         for m in t_data["measurements"]:
-            ui_data[m['metric'].replace('_', ' ').title()] = f"{m['value']} {m['unit']}"
-    elif "temperature_c" in t_data:
-        ui_data["Temperature"] = f"{t_data['temperature_c']} °C"
-        ui_data["Flow"] = f"{t_data['flow_l_min']} L/min"
-    elif "last_state" in t_data:
-        ui_data["Status"] = t_data["last_state"]
-        ui_data["Cycles/h"] = t_data["cycles_per_hour"]
+            label = m['metric'].replace('_', ' ').title()
+            ui_data[label] = f"{m['value']} {m.get('unit', '')}".strip()
+            
+    # Se sono dati grezzi (power_kw, voltage_v, ecc.)
+    else:
+        for k, v in t_data.items():
+            if k not in ['id', 'topic', 'timestamp', 'origin', 'status']:
+                label = k.replace('_', ' ').title()
+                ui_data[label] = str(v)
+                
     return ui_data
-
 
 def setup_dashboard_page(navigation_bar_func):
     @ui.page('/')
     async def dashboard_page():
+        # Renderizza la barra di navigazione
         navigation_bar_func()
         
-        ui.label('Environmental Sensors').classes('text-2xl font-bold w-full text-center mt-6')
+        # --- 1. SENSORI AMBIENTALI ---
+        ui.label('Environmental Sensors').classes('text-2xl font-bold w-full text-center mt-6 text-gray-800')
         sensor_updaters = {}
         with ui.row().classes('w-full justify-center gap-4 p-4 flex-wrap'):
-            sensor_updaters['greenhouse_temperature'] = SensorWidget('Greenhouse Temperature', 'thermostat', 'red')
+            sensor_updaters['greenhouse_temperature'] = SensorWidget('Greenhouse Temp', 'thermostat', 'red')
             sensor_updaters['entrance_humidity'] = SensorWidget('Entrance Humidity', 'water_drop', 'blue')
             sensor_updaters['co2_hall'] = SensorWidget('Corridor CO2', 'co2', 'green')
             sensor_updaters['corridor_pressure'] = SensorWidget('Corridor Pressure', 'compress', 'purple')
@@ -45,78 +54,102 @@ def setup_dashboard_page(navigation_bar_func):
             sensor_updaters['air_quality_pm25'] = SensorWidget('Air Quality PM2.5', 'blur_on', 'grey')
             sensor_updaters['water_tank_level'] = SensorWidget('Water Tank Level', 'waves', 'cyan')
 
+        # --- 2. GRAFICI ---
         with ui.row().classes('w-full gap-4 p-4 justify-center flex-wrap lg:flex-nowrap'):
-            update_temp_chart = SingleChartFactory('Temperature Chart', 'Temp', '#ef4444', '°C')
-            update_hum_chart = SingleChartFactory('Humidity Chart', 'Humidity', '#3b82f6', '%')
+            update_temp_chart = SingleChartFactory('Temperature Trend', 'Temp', '#ef4444', '°C')
+            update_hum_chart = SingleChartFactory('Humidity Trend', 'Humidity', '#3b82f6', '%')
 
-        ui.label('Actuators Control').classes('text-2xl font-bold w-full text-center mt-8')
+        # --- 3. ATTUATORI ---
+        ui.label('Actuators Control').classes('text-2xl font-bold w-full text-center mt-8 text-gray-800')
         act_states = get_initial_actuators_state()
         act_updaters = {}
         with ui.row().classes('w-full justify-center gap-4 p-4 flex-wrap'):
             act_updaters['cooling_fan'] = ActuatorWidget('Cooling Fan', 'ac_unit', 'blue', 'cooling_fan', act_states.get('cooling_fan'))
-            act_updaters['entrance_humidifier'] = ActuatorWidget('Entrance Humidifier', 'water_drop', 'cyan', 'entrance_humidifier', act_states.get('entrance_humidifier'))
-            act_updaters['hall_ventilation'] = ActuatorWidget('Corridor Ventilation', 'air', 'teal', 'hall_ventilation', act_states.get('hall_ventilation'))
-            act_updaters['habitat_heater'] = ActuatorWidget('Habitat Heater', 'fireplace', 'orange', 'habitat_heater', act_states.get('habitat_heater'))
+            act_updaters['entrance_humidifier'] = ActuatorWidget('Humidifier', 'water_drop', 'cyan', 'entrance_humidifier', act_states.get('entrance_humidifier'))
+            act_updaters['hall_ventilation'] = ActuatorWidget('Ventilation', 'air', 'teal', 'hall_ventilation', act_states.get('hall_ventilation'))
+            act_updaters['habitat_heater'] = ActuatorWidget('Heater', 'fireplace', 'orange', 'habitat_heater', act_states.get('habitat_heater'))
 
-        ui.label('Live Telemetry').classes('text-2xl font-bold w-full text-center mt-8')
+        # --- 4. TELEMETRIA ---
+        ui.label('Live Telemetry (WebSocket)').classes('text-2xl font-bold w-full text-center mt-8 text-gray-800')
         tel_updaters = {}
         tel_defs = {
-            'mars/telemetry/solar_array': ('Solar Panels', 'solar_power', 'orange'),
-            'mars/telemetry/power_bus': ('Power Bus', 'electrical_services', 'yellow'),
-            'mars/telemetry/power_consumption': ('Power Consumption', 'electric_bolt', 'red'),
-            'mars/telemetry/radiation': ('Radiation', 'radar', 'purple'),
-            'mars/telemetry/life_support': ('Life Support', 'favorite', 'green'),
-            'mars/telemetry/thermal_loop': ('Thermal Loop', 'severe_cold', 'blue'),
-            'mars/telemetry/airlock': ('Airlock', 'meeting_room', 'grey'),
+            'mars/telemetry/solar_array': ('Solar Panels', 'solar_power', '#ff9900'),
+            'mars/telemetry/power_bus': ('Power Bus', 'electrical_services', '#ffcc00'),
+            'mars/telemetry/power_consumption': ('Power Consumption', 'electric_bolt', '#ff0000'),
+            'mars/telemetry/radiation': ('Radiation', 'radar', '#aa00ff'),
+            'mars/telemetry/life_support': ('Life Support', 'favorite', '#00cc00'),
+            'mars/telemetry/thermal_loop': ('Thermal Loop', 'severe_cold', '#0066ff'),
+            'mars/telemetry/airlock': ('Airlock', 'meeting_room', '#999999'),
         }
         with ui.row().classes('w-full justify-center gap-4 p-4 flex-wrap'):
             for topic, (name, icon, col) in tel_defs.items():
                 tel_updaters[topic] = TelemetryWidget(name, icon, col)
 
+        # --- LOGICA 1: REST POLLING (Dati Lenti + Regole) ---
         def update_rest_data():
-            raw = get_latest_sensor_data()
-            grouped = {}
-            for e in raw:
-                sid = e['id']
-                if sid not in grouped: grouped[sid] = []
-                grouped[sid].append(e)
-                if sid in sensor_updaters:
-                    sensor_updaters[sid](f"{e['value']} {e['unit'] or ''}")
+            try:
+                raw = get_latest_sensor_data()
+                if not raw: return
 
-            t = next((e['value'] for e in raw if e['id'] == 'greenhouse_temperature'), None)
-            h = next((e['value'] for e in raw if e['id'] == 'entrance_humidity'), None)
-            update_temp_chart(t)
-            update_hum_chart(h)
+                grouped = {}
+                for e in raw:
+                    sid = e['id']
+                    if sid not in grouped: grouped[sid] = []
+                    grouped[sid].append(e)
+                    if sid in sensor_updaters:
+                        sensor_updaters[sid](f"{e['value']} {e['unit'] or ''}")
 
-            for rule in get_rules():
-                if rule['sensor'] in grouped:
-                    val = float(grouped[rule['sensor']][0]['value'])
-                    target = float(rule['value'])
-                    trigger = False
-                    op = rule['operator']
-                    if op == '>': trigger = val > target
-                    elif op == '<': trigger = val < target
-                    elif op == '>=': trigger = val >= target
-                    elif op == '<=': trigger = val <= target
-                    elif op == '=': trigger = val == target
-                    if trigger and rule['actuator'] in act_updaters:
-                        act_updaters[rule['actuator']](rule['action'])
+                # Update Grafici
+                t = next((e['value'] for e in raw if e['id'] == 'greenhouse_temperature'), None)
+                h = next((e['value'] for e in raw if e['id'] == 'entrance_humidity'), None)
+                update_temp_chart(t)
+                update_hum_chart(h)
 
-            t_stream = get_telemetry_stream_mock()
-            for topic, data in t_stream.items():
-                if topic in tel_updaters:
-                    tel_updaters[topic](extract_telemetry_data(data))
+                # Motore Regole
+                for rule in get_rules():
+                    if rule['sensor'] in grouped:
+                        val = float(grouped[rule['sensor']][0]['value'])
+                        target = float(rule['value'])
+                        op = rule['operator']
+                        trigger = False
+                        if op == '>': trigger = val > target
+                        elif op == '<': trigger = val < target
+                        elif op == '>=': trigger = val >= target
+                        elif op == '<=': trigger = val <= target
+                        elif op == '=': trigger = val == target
+                        
+                        if trigger and rule['actuator'] in act_updaters:
+                            # Chiamata all'attuatore via UI per feedback visivo
+                            act_updaters[rule['actuator']].set_value(rule['action'] == 'ON')
+            except Exception as e:
+                print(f"Polling error: {e}")
 
+        # --- LOGICA 2: WEBSOCKET LISTENER (Dati Real-time) ---
         async def ws_listener():
             while True:
                 try:
                     t_stream = await get_next_push_event()
-                    for topic, data in t_stream.items():
+                    print(f"🛑 CHECK 2 (DASHBOARD): Pescato dalla coda -> {t_stream}", flush=True)
+                    # Caso 1: Arriva un singolo evento (StandardFormat)
+                    if isinstance(t_stream, dict) and 'id' in t_stream:
+                        topic = f"mars/telemetry/{t_stream['id']}"
                         if topic in tel_updaters:
-                            tel_updaters[topic](extract_telemetry_data(data))
+                            ui_data = extract_telemetry_data(t_stream)
+                            tel_updaters[topic](ui_data)
+                    # Caso 2: Arriva il blocco completo dei topic
+                    elif isinstance(t_stream, dict):
+                        for topic, data in t_stream.items():
+                            if topic in tel_updaters:
+                                tel_updaters[topic](extract_telemetry_data(data))
                 except Exception as e:
-                    print(f"WebSocket error: {e}")
+                    print(f"WS Listener error: {e}")
                     await asyncio.sleep(1)
 
+        # Avvio Timer (NiceGUI lo pulisce da solo alla disconnessione se creato qui)
         ui.timer(5.0, update_rest_data)
-        asyncio.create_task(ws_listener())
+        
+        # Avvio Task Asincrono per WebSocket
+        bg_task = asyncio.create_task(ws_listener())
+        
+        # --- PULIZIA ALLA CHIUSURA (FIX CLIENT DELETED) ---
+        ui.context.client.on_disconnect(lambda: bg_task.cancel())
