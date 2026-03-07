@@ -1,6 +1,13 @@
 import crud
 from models import StandardFormat
 from cache import latest_sensor_state
+from broker_client import BrokerClient
+
+command_broker = BrokerClient(host='localhost') # 'activemq' su Docker
+try:
+    command_broker.connect()
+except Exception as e:
+    print("Avviso: Broker per i comandi non ancora connesso.")
 
 def receive_event(event: StandardFormat):
 
@@ -42,7 +49,14 @@ def receive_event(event: StandardFormat):
     print("fine elaborazione")
 
 def trigger_actuator(name: str, state: str):
-    print(f"actuator {name} is now {state}")
+    print(f"sending to actuator {name} command {state}")
+
+    message = f'{{"actuator": "{name}", "state": "{state}"}}'
+
+    if command_broker.connected:
+        command_broker.send_message("actuator_command", message)
+    else:
+        print("broker non connesso")
 
 
 if __name__ == "__main__":
@@ -50,7 +64,7 @@ if __name__ == "__main__":
     class FakeEvent:
         id = "greenhouse_temperature"
         metric = "temperature"
-        value = 35.5 # Fa caldissimo!
+        value = 13.5 # Fa caldissimo!
 
     evento_finto = FakeEvent()
     
