@@ -2,6 +2,10 @@ import crud
 from models import AutomationRule
 from cache import latest_sensor_state
 from fastapi import FastAPI, HTTPException
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from actuator_client import trigger_actuator
 
 app = FastAPI(title = "mars")
 
@@ -22,3 +26,8 @@ def deleteRule(id_rule: int):
 @app.get("/api/get-latest-state")
 def getLatestState():
     return latest_sensor_state
+
+@app.post("/api/set-actuator")
+def setActuator(actuator_id: str, state: str):
+    trigger_actuator(actuator_id, state)
+    return {"message": f"actuator {actuator_id} set to {state}"}

@@ -1,27 +1,49 @@
 services:
-  # Servizio 1: Polling dei sensori REST
-  rest-poller:
-    build: ./ingestion
-    platform: linux/amd64
-    command: ["python", "-u", "rest_poller.py"] # Sovrascrive il CMD del Dockerfile
-    depends_on:
-      - simulator
-      - activemq
-
-  # Servizio 2: Ascolto dello Stream SSE
-  stream-subscriber:
-    build: ./ingestion
-    platform: linux/amd64
-    command: ["python", "-u", "stream_subscriber.py"] # Lancia lo stream
-    depends_on:
-      - simulator
-      - activemq
-
+  # Servizio Simulator
   simulator:
-    image: mars-iot-simulator:latest
+    build: ./simulator
     platform: linux/amd64
     ports:
       - "8080:8080"
+
+  # Servizio 1: Polling dei sensori REST
+  rest-poller:
+    build: ./source/backend
+    platform: linux/amd64
+    command: ["python", "-u", "rest_poller.py"] # Sovrascrive il CMD del Dockerfile
+    depends_on:
+      - activemq
+      - simulator
+
+  # Servizio 2: Ascolto dello Stream SSE
+  stream-subscriber:
+    build: ./source/backend
+    platform: linux/amd64
+    command: ["python", "-u", "stream_subscriber.py"] # Lancia lo stream
+    depends_on:
+      - activemq
+
+  # Servizio Automation
+  automation:
+    build: ./source/backend
+    platform: linux/amd64
+    command: ["python", "-m", "uvicorn", "automation.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    depends_on:
+      - activemq
+
+  # Servizio 3: Frontend
+  frontend:
+    build: ./source/frontend
+    platform: linux/amd64
+    ports:
+      - "8081:8081"
+    depends_on:
+      - activemq
+      - rest-poller
+      - stream-subscriber
+
 
   activemq:
     image: apache/activemq-classic:latest

@@ -4,3 +4,4 @@ httpx
 pydantic
 typing
 nicegui[highcharts]
+stomp.py
