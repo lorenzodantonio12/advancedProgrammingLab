@@ -29,7 +29,7 @@ def start_polling():
                 if response.status_code == 200:
                     standard_data = map_to_standard(sensor_id, response.json(), schema)
                     
-                    # 1. Stampa per controllo (come richiesto)
+                    # 1. Stampa per controllo x
                     print(f"NORMALIZED: {standard_data.id} = {standard_data.value}")
                     
                     # 2. Invio al broker

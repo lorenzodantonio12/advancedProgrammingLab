@@ -1,8 +1,10 @@
 services:
-<<<<<<< HEAD
-  # Polling REST
+  # --- MEMBER 1: INGESTION & ACTUATION ---
+  # Tutti questi tre servizi usano il Dockerfile in ./source/backend/ingestion
+
   rest-poller:
-    build: ./ingestion
+    build: ./source/backend/ingestion
+    container_name: rest-poller
     platform: linux/amd64
     command: ["python", "-u", "rest_poller.py"]
     depends_on:
@@ -10,10 +12,11 @@ services:
       - activemq
     environment:
       - BROKER_HOST=activemq
+    restart: always
 
-  # Streaming SSE
   stream-subscriber:
-    build: ./ingestion
+    build: ./source/backend/ingestion
+    container_name: stream-subscriber
     platform: linux/amd64
     command: ["python", "-u", "stream_subscriber.py"]
     depends_on:
@@ -21,10 +24,11 @@ services:
       - activemq
     environment:
       - BROKER_HOST=activemq
+    restart: always
 
-  # Esecutore Comandi (Consumer)
   actuator-executor:
-    build: ./ingestion
+    build: ./source/backend/ingestion
+    container_name: actuator-executor
     platform: linux/amd64
     command: ["python", "-u", "consumer.py"]
     depends_on:
@@ -35,65 +39,51 @@ services:
       - SIMULATOR_HOST=simulator
     restart: always
 
-  # Il simulatore fornito dal prof
-=======
-  # Servizio Simulator
->>>>>>> c813256f91f28bd2d5738963930f26550edc47c4
-  simulator:
-    build: ./simulator
-    platform: linux/amd64
-    ports:
-      - "8080:8080"
+  # --- MEMBER 2: AUTOMATION LOGIC ---
+  # Usa il Dockerfile che abbiamo appena corretto in ./source/backend/automation
 
-<<<<<<< HEAD
-  # Il Broker ActiveMQ
-=======
-  # Servizio 1: Polling dei sensori REST
-  rest-poller:
-    build: ./source/backend
-    platform: linux/amd64
-    command: ["python", "-u", "rest_poller.py"] # Sovrascrive il CMD del Dockerfile
-    depends_on:
-      - activemq
-      - simulator
-
-  # Servizio 2: Ascolto dello Stream SSE
-  stream-subscriber:
-    build: ./source/backend
-    platform: linux/amd64
-    command: ["python", "-u", "stream_subscriber.py"] # Lancia lo stream
-    depends_on:
-      - activemq
-
-  # Servizio Automation
   automation:
-    build: ./source/backend
+    build: ./source/backend/automation
+    container_name: automation-engine
     platform: linux/amd64
-    command: ["python", "-m", "uvicorn", "automation.main:app", "--host", "0.0.0.0", "--port", "8000"]
-    ports:
-      - "8000:8000"
+    # Nota: usiamo main:app assumendo che il file si chiami main.py dentro la cartella automation
+    command: ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
     depends_on:
       - activemq
+    environment:
+      - BROKER_HOST=activemq
+    restart: always
 
-  # Servizio 3: Frontend
+  # --- MEMBER 3: FRONTEND ---
+
   frontend:
     build: ./source/frontend
+    container_name: mars-frontend
     platform: linux/amd64
     ports:
       - "8081:8081"
     depends_on:
       - activemq
-      - rest-poller
-      - stream-subscriber
+    restart: always
 
+  # --- INFRASTRUCTURE ---
 
->>>>>>> c813256f91f28bd2d5738963930f26550edc47c4
-  activemq:
-    image: apache/activemq-classic:latest
+  simulator:
+    build: ./simulator
+    container_name: mars-simulator
     platform: linux/amd64
     ports:
-      - "61613:61613"
-      - "8161:8161"
+      - "8080:8080"
+    restart: always
+
+  activemq:
+    image: apache/activemq-classic:latest
+    container_name: activemq
+    platform: linux/amd64
+    ports:
+      - "61613:61613" # Porta per STOMP (Python)
+      - "8161:8161"   # Console Web (Admin)
     environment:
       - ACTIVEMQ_ADMIN_USER=admin
       - ACTIVEMQ_ADMIN_PASSWORD=admin
+    restart: always
