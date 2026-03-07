@@ -51,7 +51,7 @@ def listen_to_topic(topic, broker):
                             standard_data = map_to_standard(sensor_id, raw_event, family)
                             
                             # Log e invio al Broker (ActiveMQ)
-                            print(f"📥 [STREAM] {sensor_id}: {standard_data.value} {standard_data.unit}")
+                            print(f"📥 [STREAM] {sensor_id}: {standard_data.value} {standard_data.unit} \n")
                             broker.send_message("mars_telemetry", standard_data.model_dump_json())
             else:
                 print(f"⚠️ Topic {topic} non disponibile (Status: {response.status_code})")

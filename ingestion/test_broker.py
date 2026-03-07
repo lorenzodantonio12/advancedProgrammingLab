@@ -1,15 +1,32 @@
-from normalizer import map_to_standard
-from broker_client import BrokerClient
+import stomp
+import json
+import time
 
-# 1. Simuliamo un dato grezzo
-raw = {"temp": 24.5}
-standard_data = map_to_standard("greenhouse_temperature", raw, "rest.scalar.v1")
+class TelemetryListener(stomp.ConnectionListener):
+    def on_message(self, frame):
+        # Decodifica il JSON normalizzato
+        data = json.loads(frame.body)
+        print(f"📥 RICEVUTO: {data}")
 
-# 2. Proviamo a inviarlo (Nota: fallirà finché non lanciamo ActiveMQ)
-try:
-    client = BrokerClient()
-    client.send_message("telemetry_queue", standard_data.model_dump_json())
-    client.close()
-except Exception as e:
-    print(f"Errore previsto: {e}")
-    print("TIP: Non abbiamo ancora acceso ActiveMQ, è normale!")
+def run_test_listener():
+    # Usiamo localhost perché lo lanciamo da fuori Docker (il broker espone la 61613)
+    conn = stomp.Connection([('localhost', 61613)])
+    conn.set_listener('test_telemetry', TelemetryListener())
+    
+    try:
+        conn.connect(wait=True)
+        # Sottoscrizione alla coda della telemetria
+        conn.subscribe(destination='/queue/mars_telemetry', id=1, ack='auto')
+        print("🚀 Test Listener avviato! In attesa di dati da Poller e Stream...")
+        print("Premi CTRL+C per fermare.\n" + "-"*50)
+        
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\nStopping...")
+        conn.disconnect()
+    except Exception as e:
+        print(f"Errore: {e}")
+
+if __name__ == "__main__":
+    run_test_listener()
