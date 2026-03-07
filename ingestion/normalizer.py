@@ -1,62 +1,62 @@
-from datetime import datetime
-from typing import Optional
 from pydantic import BaseModel
-import json
 from datetime import datetime
+from typing import Any
 
-# Definiamo lo schema che avete concordato nel team [cite: 72]
 class StandardFormat(BaseModel):
-    id: str        # Esempio: greenhouse_temperature
-    metric: str    # Esempio: temperature, ph, co2...
+    id: str
+    metric: str
     timestamp: datetime
     value: float
-    unit: Optional[str] = None
-    origin: str    # La famiglia dello schema (es: rest.scalar.v1)
-    status: Optional[str] = None
+    unit: str
+    origin: str
+    status: str
 
 def map_to_standard(sensor_id: str, raw_data: dict, schema_family: str) -> StandardFormat:
-    """
-    Prende i dati grezzi dal simulatore e li trasforma in StandardFormat.
-    """
-    
-    # 1. Mappa delle unità di misura basata sui sensori REST 
-    units = {
-        "temperature": "°C",
-        "humidity": "%",
-        "co2": "ppm",
-        "ph": "pH",
-        "level": "%",
-        "pressure": "Pa",
-        "pm25": "µg/m³",
-        "voc": "ppb"
-    }
-
-    # 2. Estraiamo il valore numerico dal JSON del simulatore.
-    # I sensori REST mandano chiavi diverse (es: {"temp": 25} o {"ph": 7}). 
-    # Questo trucco prende il primo valore numerico che trova nel dizionario.
     value = 0.0
-    if isinstance(raw_data, dict):
+    
+    # 1. Estrazione Valore (Gestione SSE e REST)
+    if isinstance(raw_data, dict) and "measurements" in raw_data:
+        try:
+            value = float(raw_data["measurements"][0]["value"])
+        except (IndexError, KeyError, TypeError, ValueError):
+            value = 0.0
+    elif isinstance(raw_data, dict):
         for v in raw_data.values():
             if isinstance(v, (int, float)):
                 value = float(v)
                 break
     
-    # 3. Determiniamo il tipo di metrica dall'ID (l'ultima parola dopo l'underscore)
-    # Esempio: "greenhouse_temperature" -> "temperature"
-    metric_type = sensor_id.split('_')[-1]
+    # 2. Mappa Unità di Misura (Nomi completi per match perfetto)
+    units_map = {
+        "greenhouse_temperature": "°C",
+        "entrance_humidity": "%",
+        "hydroponic_ph": "pH",
+        "water_tank_level": "%",
+        "corridor_pressure": "Pa",
+        "air_quality_pm25": "µg/m³",
+        "air_quality_voc": "ppb",
+        "co2_hall": "ppm",
+        "mars_telemetry_radiation": "uSv/h",
+        "mars_telemetry_solar_array": "W",
+        "mars_telemetry_power_bus": "V",
+        "mars_telemetry_power_consumption": "W",
+        "mars_telemetry_thermal_loop": "°C",
+        "mars_telemetry_airlock": "bar",
+        "mars_telemetry_life_support": "%"
+    }
+    
+    # Usiamo l'ID intero per trovare l'unità, così non sbagliamo più
+    unit = units_map.get(sensor_id, "N/A")
+    
+    # Estraiamo un nome metrica leggibile (l'ultima parola dopo l'underscore)
+    metric_name = sensor_id.split('_')[-1]
 
-    # 4. Creiamo l'oggetto normalizzato
     return StandardFormat(
         id=sensor_id,
-        metric=metric_type,
+        metric=metric_name,
         timestamp=datetime.now(),
         value=value,
-        unit=units.get(metric_type, "N/A"),
+        unit=unit,
         origin=schema_family,
         status="OK"
     )
-
-def to_json(data: StandardFormat) -> str:
-    # Trasforma l'oggetto Pydantic in una stringa JSON
-    # Usiamo isoformat per la data così il Member 2 non impazzisce a leggerla
-    return data.model_dump_json()

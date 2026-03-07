@@ -1,37 +1,82 @@
 import requests
 import json
 import time
+import threading
 from normalizer import map_to_standard
 from broker_client import BrokerClient
 
-# In Docker, l'host è il nome del servizio nel compose
-TOPIC_URL = "http://simulator:8080/api/telemetry/stream/mars/telemetry/radiation"
+# Lista ufficiale dei topic dal bando (Pagina 3)
+TOPICS = [
+    "mars/telemetry/solar_array",
+    "mars/telemetry/radiation",
+    "mars/telemetry/life_support",
+    "mars/telemetry/thermal_loop",
+    "mars/telemetry/power_bus",
+    "mars/telemetry/power_consumption",
+    "mars/telemetry/airlock"
+]
+
+def listen_to_topic(topic, broker):
+    # Endpoint SSE come da specifica: /api/telemetry/stream/{topic}
+    url = f"http://simulator:8080/api/telemetry/stream/{topic}"
+    # Creiamo un ID interno unico sostituendo gli slash
+    sensor_id = topic.replace("/", "_")
+    
+    # Determiniamo la schema family dal bando per la documentazione
+    schema_map = {
+        "solar_array": "topic.power.v1",
+        "radiation": "topic.environment.v1",
+        "life_support": "topic.environment.v1",
+        "thermal_loop": "topic.thermal_loop.v1",
+        "power_bus": "topic.power.v1",
+        "power_consumption": "topic.power.v1",
+        "airlock": "topic.airlock.v1"
+    }
+    family = schema_map.get(topic.split('/')[-1], "topic.general.v1")
+
+    while True:
+        try:
+            print(f"📡 Sottoscrizione a: {topic}")
+            response = requests.get(url, stream=True, timeout=None)
+            
+            if response.status_code == 200:
+                for line in response.iter_lines():
+                    if line:
+                        decoded_line = line.decode('utf-8')
+                        if decoded_line.startswith("data:"):
+                            json_str = decoded_line.replace("data:", "").strip()
+                            raw_event = json.loads(json_str)
+                            
+                            # Normalizzazione
+                            standard_data = map_to_standard(sensor_id, raw_event, family)
+                            
+                            # Log e invio al Broker (ActiveMQ)
+                            print(f"📥 [STREAM] {sensor_id}: {standard_data.value} {standard_data.unit}")
+                            broker.send_message("mars_telemetry", standard_data.model_dump_json())
+            else:
+                print(f"⚠️ Topic {topic} non disponibile (Status: {response.status_code})")
+                time.sleep(10)
+        except Exception as e:
+            print(f"❌ Errore connessione su {topic}: {e}. Riprovo...")
+            time.sleep(5)
 
 def start_streaming():
     broker = BrokerClient(host='activemq')
     broker.connect()
     
-    print("Avvio sottoscrizione Telemetria (SSE)...")
+    threads = []
+    for t in TOPICS:
+        thread = threading.Thread(target=listen_to_topic, args=(t, broker))
+        thread.daemon = True # Il thread muore se il main muore
+        thread.start()
+        threads.append(thread)
     
-    while True:
-        try:
-            response = requests.get(TOPIC_URL, stream=True, timeout=10)
-            for line in response.iter_lines():
-                if line:
-                    decoded_line = line.decode('utf-8')
-                    if decoded_line.startswith("data:"):
-                        json_str = decoded_line.replace("data:", "").strip()
-                        raw_data = json.loads(json_str)
-                        
-                        # Normalizzazione
-                        standard_data = map_to_standard("mars_radiation", raw_data, "topic.environment.v1")
-                        
-                        # Controllo a video e invio al broker
-                        print(f"STREAM -> {standard_data.id}: {standard_data.value}")
-                        broker.send_message("mars_telemetry", standard_data.model_dump_json())
-        except Exception as e:
-            print(f"Connessione stream persa, riprovo... ({e})")
-            time.sleep(5)
+    # Mantieni il processo attivo
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Spegnimento subscriber...")
 
 if __name__ == "__main__":
     start_streaming()
