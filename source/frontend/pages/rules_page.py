@@ -1,0 +1,146 @@
+from nicegui import ui
+from services.api import get_rules, add_rule, delete_rule
+
+
+# Sensor and actuator icons/names mapping
+SENSOR_ICONS = {
+    'greenhouse_temperature': ('thermostat', 'Greenhouse Temp', 'red'),
+    'entrance_humidity': ('water_drop', 'Entrance Humidity', 'blue'),
+    'co2_hall': ('co2', 'Corridor CO2', 'green'),
+    'water_tank_level': ('waves', 'Water Tank', 'cyan'),
+}
+
+ACTUATOR_ICONS = {
+    'cooling_fan': ('ac_unit', 'Cooling Fan', 'blue'),
+    'entrance_humidifier': ('water_drop', 'Humidifier', 'cyan'),
+    'hall_ventilation': ('air', 'Ventilation', 'teal'),
+    'habitat_heater': ('fireplace', 'Heater', 'orange'),
+}
+
+OPERATOR_ICONS = {
+    '>': ('arrow_upward', 'Greater than'),
+    '<': ('arrow_downward', 'Less than'),
+    '>=': ('trending_up', 'Greater or equal'),
+    '<=': ('trending_down', 'Less or equal'),
+    '=': ('equal', 'Equal to'),
+}
+
+
+def setup_rules_page(navigation_bar_func):
+    """Setup the rules management page"""
+    
+    @ui.page('/rules')
+    def rules_page():
+        navigation_bar_func()
+        ui.label('Automation Engine').classes('text-3xl font-bold w-full text-center mt-8 mb-8 text-gray-800')
+        
+        sens_list = list(SENSOR_ICONS.keys())
+        act_list = list(ACTUATOR_ICONS.keys())
+
+        # --- CREATE NEW RULE CARD ---
+        with ui.card().classes('w-4/5 mx-auto p-8 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-lg border-2 border-blue-200 rounded-xl'):
+            ui.label('Create Automation Rule').classes('text-2xl font-bold mb-6 text-blue-900')
+            
+            with ui.row().classes('w-full items-end gap-6 flex-wrap'):
+                # Sensor section
+                with ui.column().classes('gap-2'):
+                    ui.icon('sensors').classes('text-3xl text-blue-600')
+                    s = ui.select(sens_list, label='Sensor', value=sens_list[0] if sens_list else None).classes('w-56')
+                
+                # Operator section
+                with ui.column().classes('gap-2'):
+                    ui.icon('compare').classes('text-3xl text-purple-600')
+                    o = ui.select(list(OPERATOR_ICONS.keys()), label='Operator', value='>' if OPERATOR_ICONS else None).classes('w-32')
+                
+                # Value section
+                with ui.column().classes('gap-2'):
+                    ui.icon('input').classes('text-3xl text-green-600')
+                    v = ui.input(label='Value', placeholder='e.g., 25').classes('w-32')
+                
+                # Arrow
+                ui.label('→').classes('text-4xl font-bold text-gray-400')
+                
+                # Actuator section
+                with ui.column().classes('gap-2'):
+                    ui.icon('outlet').classes('text-3xl text-orange-600')
+                    a = ui.select(act_list, label='Actuator', value=act_list[0] if act_list else None).classes('w-56')
+                
+                # Action section
+                with ui.column().classes('gap-2'):
+                    ui.icon('power_settings_new').classes('text-3xl text-red-600')
+                    av = ui.select(['ON', 'OFF'], label='Action', value='ON').classes('w-32')
+                
+                # Save button
+                def save_rule():
+                    if all([s.value, o.value, v.value, a.value, av.value]):
+                        add_rule(s.value, o.value, v.value, a.value, av.value)
+                        ui.notify('✓ Rule created!', position='top', type='positive')
+                        s.set_value(sens_list[0] if sens_list else None)
+                        o.set_value('>')
+                        v.set_value('')
+                        a.set_value(act_list[0] if act_list else None)
+                        av.set_value('ON')
+                        table.refresh()
+                    else:
+                        ui.notify('⚠ Fill all fields!', position='top', type='warning')
+                
+                ui.button('Create Rule', on_click=save_rule, icon='add').classes('h-12 px-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold shadow-lg hover:shadow-xl')
+
+        # --- ACTIVE RULES LIST ---
+        ui.label('Active Rules').classes('text-2xl font-bold w-full text-center mt-12 mb-6 text-gray-800')
+        
+        @ui.refreshable
+        def table():
+            rules = get_rules()
+            if not rules:
+                with ui.column().classes('w-full items-center justify-center mt-8'):
+                    ui.icon('info').classes('text-6xl text-gray-300')
+                    ui.label('No active rules yet').classes('text-lg text-gray-500 mt-4')
+                return
+            
+            with ui.column().classes('w-4/5 mx-auto gap-4'):
+                for r in rules:
+                    sen_icon, sen_name, sen_col = SENSOR_ICONS.get(r['sensor'], ('sensor', r['sensor'], 'gray'))
+                    act_icon, act_name, act_col = ACTUATOR_ICONS.get(r['actuator'], ('outlet', r['actuator'], 'gray'))
+                    op_icon, op_desc = OPERATOR_ICONS.get(r['operator'], ('help', r['operator']))
+                    
+                    with ui.card().classes('w-full p-5 bg-white shadow-md border-l-4 border-blue-500 hover:shadow-lg transition'):
+                        with ui.row().classes('w-full items-center justify-between gap-6 flex-wrap'):
+                            # Sensor
+                            with ui.row().classes('items-center gap-2'):
+                                ui.icon(sen_icon).classes(f'text-2xl text-{sen_col}-600')
+                                with ui.column().classes('gap-1'):
+                                    ui.label('IF').classes('text-xs font-bold text-gray-500 uppercase')
+                                    ui.label(sen_name).classes('font-semibold text-gray-800')
+                            
+                            # Operator and value
+                            with ui.row().classes('items-center gap-2'):
+                                ui.icon(op_icon).classes(f'text-xl text-purple-600')
+                                ui.label(r['operator']).classes('font-bold text-lg text-purple-700')
+                                ui.label(r['value']).classes('font-mono bg-gray-100 px-3 py-1 rounded text-gray-800')
+                            
+                            # Arrow
+                            ui.label('→').classes('text-2xl font-bold text-gray-400')
+                            
+                            # Actuator
+                            with ui.row().classes('items-center gap-2'):
+                                ui.icon(act_icon).classes(f'text-2xl text-{act_col}-600')
+                                with ui.column().classes('gap-1'):
+                                    ui.label('THEN').classes('text-xs font-bold text-gray-500 uppercase')
+                                    ui.label(act_name).classes('font-semibold text-gray-800')
+                            
+                            # Action
+                            action_color = 'green' if r['action'] == 'ON' else 'red'
+                            with ui.row().classes(f'items-center gap-2 px-3 py-2 rounded-lg bg-{action_color}-100'):
+                                ui.icon('power_settings_new').classes(f'text-xl text-{action_color}-600')
+                                ui.label(r['action']).classes(f'font-bold text-{action_color}-700')
+                            
+                            # Delete button
+                            def delete_rule_handler(rule_id=r['id']):
+                                delete_rule(rule_id)
+                                ui.notify('✓ Rule deleted', position='top', type='info')
+                                table.refresh()
+                            
+                            ui.button(icon='delete_outline', on_click=delete_rule_handler).props('flat round').classes('text-red-600 hover:bg-red-50')
+        
+        table()
