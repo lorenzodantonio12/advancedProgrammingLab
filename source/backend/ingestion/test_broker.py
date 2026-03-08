@@ -16,8 +16,8 @@ def run_test_listener():
     try:
         conn.connect(wait=True)
         # Sottoscrizione alla coda della telemetria
-        conn.subscribe(destination='/queue/mars_telemetry', id=1, ack='auto')
-        print("🚀 Test Listener avviato! In attesa di dati da Poller e Stream...")
+        conn.subscribe(destination='/topic/mars_telemetry', id=1, ack='auto')
+        print("Test Listener avviato! In attesa di dati da Poller e Stream...")
         print("Premi CTRL+C per fermare.\n" + "-"*50)
         
         while True:

@@ -14,7 +14,7 @@ class ActuatorListener(stomp.ConnectionListener):
             
             trigger_actuator(actuator_id, state)
         except Exception as e:
-            print(f"❌ Errore processamento comando: {e}")
+            print(f"Errore processamento comando: {e}")
 
 def start_listening():
     # Prendi l'host del broker dall'ambiente (default: activemq)
@@ -27,11 +27,11 @@ def start_listening():
     while True:
         try:
             conn.connect(wait=True)
-            conn.subscribe(destination='/queue/actuator_command', id=1, ack='auto')
-            print(f"📡 Consumer in ascolto su {host}:61613 (coda: actuator_command)")
+            conn.subscribe(destination='/topic/actuator_command', id=1, ack='auto')
+            print(f"Consumer in ascolto su {host}:61613 (coda: actuator_command)")
             break
         except Exception:
-            print("⏳ Broker non pronto, riprovo tra 2s...")
+            print("Broker non pronto, riprovo tra 2s...")
             time.sleep(2)
 
     # Loop infinito per mantenere il container attivo

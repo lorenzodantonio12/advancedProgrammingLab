@@ -100,8 +100,8 @@ def setup_rules_page(navigation_bar_func):
             
             with ui.column().classes('w-4/5 mx-auto gap-4'):
                 for r in rules:
-                    sen_icon, sen_name, sen_col = SENSOR_ICONS.get(r['sensor'], ('sensor', r['sensor'], 'gray'))
-                    act_icon, act_name, act_col = ACTUATOR_ICONS.get(r['actuator'], ('outlet', r['actuator'], 'gray'))
+                    sen_icon, sen_name, sen_col = SENSOR_ICONS.get(r['sensor_name'], ('sensor', r['sensor_name'], 'gray'))
+                    act_icon, act_name, act_col = ACTUATOR_ICONS.get(r['actuator_name'], ('outlet', r['actuator_name'], 'gray'))
                     op_icon, op_desc = OPERATOR_ICONS.get(r['operator'], ('help', r['operator']))
                     
                     with ui.card().classes('w-full p-5 bg-white shadow-md border-l-4 border-blue-500 hover:shadow-lg transition'):
@@ -130,13 +130,13 @@ def setup_rules_page(navigation_bar_func):
                                     ui.label(act_name).classes('font-semibold text-gray-800')
                             
                             # Action
-                            action_color = 'green' if r['action'] == 'ON' else 'red'
+                            action_color = 'green' if r['state'] == 'ON' else 'red'
                             with ui.row().classes(f'items-center gap-2 px-3 py-2 rounded-lg bg-{action_color}-100'):
                                 ui.icon('power_settings_new').classes(f'text-xl text-{action_color}-600')
-                                ui.label(r['action']).classes(f'font-bold text-{action_color}-700')
+                                ui.label(r['state']).classes(f'font-bold text-{action_color}-700')
                             
                             # Delete button
-                            def delete_rule_handler(rule_id=r['id']):
+                            def delete_rule_handler(rule_id=r['id_rule']):
                                 delete_rule(rule_id)
                                 ui.notify('✓ Rule deleted', position='top', type='info')
                                 table.refresh()

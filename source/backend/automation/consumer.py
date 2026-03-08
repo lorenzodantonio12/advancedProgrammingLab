@@ -10,7 +10,6 @@ class MyListener(stomp.ConnectionListener):
 
     def on_message(self, frame):
         body = frame.body
-        print(f"Ricevuto messaggio dal broker: {body[:60]}...")
         
         try:
             data_dict = json.loads(body)
@@ -32,22 +31,15 @@ def start_listening(host='activemq', port=61613, queue_name='mars_telemetry'):
             conn.connect(wait=True)
             
             # Iscriviti alla coda dove Persona 1 sta scrivendo
-            conn.subscribe(destination=f'/queue/{queue_name}', id=1, ack='auto')
+            conn.subscribe(destination=f'/topic/{queue_name}', id=1, ack='auto')
             
             connected = True
-            print(f"In ascolto sulla coda /queue/{queue_name}...")
+            print(f"In ascolto sulla coda /topic/{queue_name}...")
+
+            return conn
+        
         except Exception as e:
             print(f"Broker non pronto, riprovo tra 3 secondi... ({e})")
             time.sleep(3)
             
-    # Tieni in vita il processo
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("Disconnessione dal broker...")
-        conn.disconnect()
-
-if __name__ == "__main__":
-    start_listening(host='localhost')
 

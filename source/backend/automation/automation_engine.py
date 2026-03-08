@@ -3,7 +3,7 @@ from models import StandardFormat
 from cache import latest_sensor_state
 from broker_client import BrokerClient
 
-command_broker = BrokerClient(host='localhost') # 'activemq' su Docker
+command_broker = BrokerClient(host='activemq') # 'activemq' su Docker
 try:
     command_broker.connect()
 except Exception as e:
@@ -11,16 +11,13 @@ except Exception as e:
 
 def receive_event(event: StandardFormat):
 
-    print(latest_sensor_state)
     latest_sensor_state[event.id] = event
-    print(latest_sensor_state)
     print("memoria aggiornata")
     
     rules = crud.get_rules()
-    print(rules)
 
 
-    print(event.value, event.metric, event.id)
+    #print(event.value, event.metric, event.id)
 
     for r in rules:
 
@@ -57,16 +54,3 @@ def trigger_actuator(name: str, state: str):
         command_broker.send_message("actuator_command", message)
     else:
         print("broker non connesso")
-
-
-if __name__ == "__main__":
-    # Immagina che la Persona 1 ti abbia appena inviato questo dato:
-    class FakeEvent:
-        id = "greenhouse_temperature"
-        metric = "temperature"
-        value = 13.5 # Fa caldissimo!
-
-    evento_finto = FakeEvent()
-    
-    print("Elaborazione evento...")
-    receive_event(evento_finto)

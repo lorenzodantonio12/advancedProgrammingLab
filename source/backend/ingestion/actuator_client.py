@@ -12,10 +12,10 @@ def trigger_actuator(actuator_id: str, state: str):
         response = requests.post(f"{ACTUATOR_URL}/{actuator_id}", json=payload)
         
         if response.status_code == 200:
-            print(f"✅ [ACTUATOR] {actuator_id} impostato su {state}")
+            print(f"[ACTUATOR] {actuator_id} impostato su {state}")
             return True
         else:
-            print(f"❌ [ACTUATOR] Errore su {actuator_id}: {response.status_code}")
+            print(f"[ACTUATOR] Errore su {actuator_id}: {response.status_code}")
             return False
     except Exception as e:
         print(f"⚠️ [ACTUATOR] Connessione fallita verso {ACTUATOR_URL}")

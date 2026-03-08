@@ -1,13 +1,37 @@
 import crud
+import consumer
 from models import AutomationRule
 from cache import latest_sensor_state
-from fastapi import FastAPI, HTTPException
+from database import create_database
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import StreamingResponse
+from contextlib import asynccontextmanager
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from actuator_client import trigger_actuator
+from automation_engine import trigger_actuator
 
-app = FastAPI(title = "mars")
+broker_connection = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+
+    create_database()
+
+    global broker_connection
+
+    print("Avvio del sistema. Connessione al broker in corso...")
+
+    broker_connection = consumer.start_listening(host='activemq')
+
+    yield
+
+    print("spegnimento")
+
+    if broker_connection:
+        broker_connection.disconnect()
+
+
+app = FastAPI(title = "mars", lifespan = lifespan)
 
 @app.get("/api/get-rules", response_model = list[AutomationRule])
 def getRules():

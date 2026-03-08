@@ -47,7 +47,7 @@ def start_telemetry_consumer(loop):
         try:
             if not conn.is_connected():
                 conn.connect(wait=True)
-                conn.subscribe(destination='/queue/mars_telemetry', id=1, ack='auto')
+                conn.subscribe(destination='/topic/mars_telemetry', id=1, ack='auto')
                 print(f"✓ Frontend connesso ad ActiveMQ su {BROKER_HOST}")
             time.sleep(5)
         except Exception as e:
@@ -99,8 +99,8 @@ def get_rules():
 
 def add_rule(sensor, operator, value, actuator, action):
     rule = {
-        "sensor": sensor, "operator": operator, "value": float(value),
-        "actuator": actuator, "action": action
+        "sensor_name": sensor, "operator": operator, "value": float(value),
+        "actuator_name": actuator, "state": action, "metric": "cosa a caso che va cambiata" #da cambiare
     }
     try:
         r = requests.post(f"{AUTOMATION_URL}/api/create-rule", json=rule, timeout=2)
