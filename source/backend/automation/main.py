@@ -1,7 +1,7 @@
 import crud
 import consumer
 from models import AutomationRule
-from cache import latest_sensor_state
+from cache import latest_sensor_state, latest_actuator_state
 from database import create_database
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -51,7 +51,12 @@ def deleteRule(id_rule: int):
 def getLatestState():
     return latest_sensor_state
 
+@app.get("/api/get-actuator-state")
+def getActuatorState():
+    return latest_actuator_state
+
 @app.post("/api/set-actuator")
 def setActuator(actuator_id: str, state: str):
     trigger_actuator(actuator_id, state)
+    latest_actuator_state[actuator_id] = state
     return {"message": f"actuator {actuator_id} set to {state}"}
