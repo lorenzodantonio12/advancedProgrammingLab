@@ -55,6 +55,8 @@ services:
     environment:
       - BROKER_HOST=activemq
     restart: always
+    volumes:
+      - sqlite_data:/app/data
 
   # --- MEMBER 3: FRONTEND ---
 
@@ -97,3 +99,8 @@ services:
       - ACTIVEMQ_ADMIN_USER=admin
       - ACTIVEMQ_ADMIN_PASSWORD=admin
     restart: always
+
+# --- FINE SERVICES ---
+
+volumes:       
+  sqlite_data:

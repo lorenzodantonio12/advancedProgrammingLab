@@ -5,7 +5,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 
 
-db = str(BASE_DIR / "mars_rules.db")
+db = str(BASE_DIR / "data" / "mars_rules.db")
 
 def get_rules():
     with sqlite3.connect(db) as conn:
