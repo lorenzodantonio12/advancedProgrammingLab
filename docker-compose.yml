@@ -70,9 +70,17 @@ services:
 
   # --- INFRASTRUCTURE ---
 
+  #simulator:
+  #  build: ./simulator
+  #  container_name: mars-simulator
+  #  platform: linux/amd64
+  #  ports:
+  #    - "8080:8080"
+  #  restart: always
+
   simulator:
-    build: ./simulator
-    container_name: mars-simulator
+    image: mars-iot-simulator:multiarch_v1
+    container_name: mars_simulator
     platform: linux/amd64
     ports:
       - "8080:8080"
