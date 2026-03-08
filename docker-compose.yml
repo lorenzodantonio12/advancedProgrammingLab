@@ -81,7 +81,7 @@ services:
   #  restart: always
 
   simulator:
-    image: mars-iot-simulator:multiarch_v1
+    image: mars-iot-simulator:latest
     container_name: mars_simulator
     platform: linux/amd64
     ports:
