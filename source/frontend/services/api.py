@@ -26,15 +26,13 @@ class TelemetryListener(stomp.ConnectionListener):
 
     def on_message(self, frame):
         try:
-            #print(f"🛑 CHECK 1 (API): Arrivato da ActiveMQ -> {frame.body}", flush=True)
             data = json.loads(frame.body)
             event = StandardFormat(**data)
             
-            # Aggiorna cache locale per REST polling
+            # Aggiorna cache locale
             key = f"{event.id}" 
             latest_sensor_data[key] = event
             
-            # Inserimento sicuro nella coda per il WebSocket push
             if self.loop:
                 self.loop.call_soon_threadsafe(telemetry_queue.put_nowait, event.model_dump())
         except Exception as e:
@@ -48,41 +46,42 @@ def start_telemetry_consumer(loop):
             if not conn.is_connected():
                 conn.connect(wait=True)
                 conn.subscribe(destination='/topic/mars_telemetry', id=1, ack='auto')
-                print(f"✓ Frontend connesso ad ActiveMQ su {BROKER_HOST}")
+                print(f"✓ Frontend connesso ad ActiveMQ")
             time.sleep(5)
-        except Exception as e:
-            print(f"⚠ ActiveMQ non pronto, riprovo tra 2s...")
+        except Exception:
             time.sleep(2)
 
-# --- FUNZIONI PER IL FRONTEND (FIX IMPORT ERRORS) ---
+# --- FUNZIONI PER IL FRONTEND ---
 
 async def get_next_push_event():
-    """Il frontend resta in attesa qui via WebSocket"""
     return await telemetry_queue.get()
 
 def get_latest_sensor_data():
-    """Restituisce la lista di eventi per le card e i grafici"""
     return [event.model_dump() for event in latest_sensor_data.values()]
 
-def get_telemetry_stream_mock():
-    result = {}
-    for event in latest_sensor_data.values():
-        topic = f"mars/telemetry/{event.id}"
-        # Formattazione per TelemetryWidget
-        result[topic] = {
-            "measurements": [
-                {"metric": event.metric, "value": event.value, "unit": event.unit}
-            ]
-        }
-    return result
+def get_initial_actuators_state():
+    # Lista dei tuoi attuatori
+    actuators = ['cooling_fan', 'entrance_humidifier', 'hall_ventilation', 'habitat_heater']
+    # Creiamo un dizionario dove sono tutti OFF
+    return {id: 'OFF' for id in actuators}
 
+def set_actuator_state(actuator_id: str, state: str):
+    """Invia il comando al backend (anche se non salva nel DB, serve per l'azione reale)"""
+    try:
+        r = requests.post(
+            f"{AUTOMATION_URL}/api/set-actuator", 
+            params={"actuator_id": actuator_id, "state": state}, 
+            timeout=1
+        )
+        return r.status_code == 200
+    except Exception:
+        return False
 
-
-# --- CHIAMATE ALL'AUTOMATION ENGINE ---
+# --- REGOLE (Queste invece devono restare collegate al DB di Automation) ---
 
 def get_rules():
     try:
-        response = requests.get(f"{AUTOMATION_URL}/api/get-rules", timeout=2)
+        response = requests.get(f"{AUTOMATION_URL}/api/get-rules", timeout=1)
         return response.json() if response.status_code == 200 else []
     except Exception:
         return []
@@ -90,50 +89,15 @@ def get_rules():
 def add_rule(sensor, operator, value, actuator, action):
     rule = {
         "sensor_name": sensor, "operator": operator, "value": float(value),
-        "actuator_name": actuator, "state": action, "metric": "cosa a caso che va cambiata" #da cambiare
+        "actuator_name": actuator, "state": action, "metric": "valore_automatico"
     }
     try:
-        r = requests.post(f"{AUTOMATION_URL}/api/create-rule", json=rule, timeout=2)
+        r = requests.post(f"{AUTOMATION_URL}/api/create-rule", json=rule, timeout=1)
         return r.status_code == 200
     except Exception: return False
 
 def delete_rule(rule_id):
     try:
-        r = requests.delete(f"{AUTOMATION_URL}/api/delete-rule/{rule_id}", timeout=2)
+        r = requests.delete(f"{AUTOMATION_URL}/api/delete-rule/{rule_id}", timeout=1)
         return r.status_code == 200
     except Exception: return False
-
-_GLOBAL_ACTUATOR_STATE = {
-    'cooling_fan': 'OFF',
-    'entrance_humidifier': 'OFF',
-    'hall_ventilation': 'OFF',
-    'habitat_heater': 'OFF'
-}
-
-def get_initial_actuators_state():
-    """Restituisce lo stato salvato nella memoria globale del frontend"""
-    return _GLOBAL_ACTUATOR_STATE
-
-def set_actuator_state(actuator_id: str, state: str):
-    """Invia il comando al TUO backend e aggiorna la memoria"""
-    try:
-        # ECCOLA QUI: La TUA rotta esatta!
-        r = requests.post(
-            f"{AUTOMATION_URL}/api/set-actuator", 
-            params={"actuator_id": actuator_id, "state": state}, 
-            timeout=2
-        )
-        
-        # Se il backend risponde "actuator set to ON/OFF" (status 200)
-        if r.status_code == 200:
-            # Salviamo l'informazione nella memoria globale
-            _GLOBAL_ACTUATOR_STATE[actuator_id] = state
-            print(f"✅ Comando inviato: {actuator_id} -> {state}", flush=True)
-            return True
-            
-        print(f"❌ Errore backend: {r.status_code} - {r.text}", flush=True)
-        return False
-        
-    except Exception as e:
-        print(f"❌ Eccezione API set_actuator: {e}", flush=True)
-        return False

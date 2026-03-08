@@ -21,39 +21,12 @@ def receive_event(event: StandardFormat):
 
     for r in rules:
 
-        print("sto cercando le regole")
-        print("sto cercando le regole")
-        print("sto cercando le regole")
-        print("sto cercando le regole")
-        print("sto cercando le regole")
-        print("sto cercando le regole")
-        print("sto cercando le regole")
-        print("sto cercando le regole")
-        print("sto cercando le regole")
-        print("sto cercando le regole")
-        print("sto cercando le regole")
-        print("sto cercando le regole")
 
-        print(r.sensor_name, event.id, r.metric, event.metric)
-        print(r.sensor_name, event.id, r.metric, event.metric)
-        print(r.sensor_name, event.id, r.metric, event.metric)
-        print(r.sensor_name, event.id, r.metric, event.metric)
-        print(r.sensor_name, event.id, r.metric, event.metric)
-        print(r.sensor_name, event.id, r.metric, event.metric)
-        print(r.sensor_name, event.id, r.metric, event.metric)
-        print(r.sensor_name, event.id, r.metric, event.metric)
+
+
 
         if (r.sensor_name == event.id and r.metric == event.metric):
 
-            print("sono dentro all'if!!!")
-            print("sono dentro all'if!!!")
-            print("sono dentro all'if!!!")
-            print("sono dentro all'if!!!")
-            print("sono dentro all'if!!!")
-            print("sono dentro all'if!!!")
-            print("sono dentro all'if!!!")
-            print("sono dentro all'if!!!")
-            print("sono dentro all'if!!!")
 
             condition = False
 
@@ -69,28 +42,7 @@ def receive_event(event: StandardFormat):
                 condition = True
             
             if condition:
-                print(f"rule {r.id_rule} is now active!!")
-                print(f"rule {r.id_rule} is now active!!")
-                print(f"rule {r.id_rule} is now active!!")
-                print(f"rule {r.id_rule} is now active!!")
-                print(f"rule {r.id_rule} is now active!!")
-                print(f"rule {r.id_rule} is now active!!")
-                print(f"rule {r.id_rule} is now active!!")
-                print(f"rule {r.id_rule} is now active!!")
-                print(f"rule {r.id_rule} is now active!!")
-                print(f"rule {r.id_rule} is now active!!")
-                print(f"rule {r.id_rule} is now active!!")
 
-                print(f"Motivo: {event.id} è {event.value} (Limite: {r.value})")
-                print(f"Motivo: {event.id} è {event.value} (Limite: {r.value})")
-                print(f"Motivo: {event.id} è {event.value} (Limite: {r.value})")
-                print(f"Motivo: {event.id} è {event.value} (Limite: {r.value})")
-                print(f"Motivo: {event.id} è {event.value} (Limite: {r.value})")
-                print(f"Motivo: {event.id} è {event.value} (Limite: {r.value})")
-                print(f"Motivo: {event.id} è {event.value} (Limite: {r.value})")
-                print(f"Motivo: {event.id} è {event.value} (Limite: {r.value})")
-                print(f"Motivo: {event.id} è {event.value} (Limite: {r.value})")
-                print(f"Motivo: {event.id} è {event.value} (Limite: {r.value})")
 
                 trigger_actuator(r.actuator_name, r.state)
     
@@ -103,19 +55,7 @@ def trigger_actuator(name: str, state: str):
 
     message = f'{{"actuator": "{name}", "state": "{state}"}}'
 
-    print(f"mandato messaggio: {name}, {state}")
-    print(f"mandato messaggio: {name}, {state}")
-    print(f"mandato messaggio: {name}, {state}")
-    print(f"mandato messaggio: {name}, {state}")
-    print(f"mandato messaggio: {name}, {state}")
-    print(f"mandato messaggio: {name}, {state}")
-    print(f"mandato messaggio: {name}, {state}")
-    print(f"mandato messaggio: {name}, {state}")
-    print(f"mandato messaggio: {name}, {state}")
-    print(f"mandato messaggio: {name}, {state}")
-    print(f"mandato messaggio: {name}, {state}")
-    print(f"mandato messaggio: {name}, {state}")
-    print(f"mandato messaggio: {name}, {state}")
+
 
     if command_broker.connected:
         command_broker.send_message("actuator_command", message)

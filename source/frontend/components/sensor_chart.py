@@ -1,55 +1,65 @@
 from nicegui import ui
 import time
+from datetime import datetime
 
-# --- LA MAGIA: Memoria Globale ---
-# Questo dizionario vive finché il container Docker è acceso.
-# Non muore mai al cambio pagina!
-_GLOBAL_CHART_HISTORY = {}
+# Memoria globale per non perdere i dati quando cambi pagina
+_GLOBAL_HISTORY = {}
 
 def SingleChartFactory(title: str, series_name: str, color: str, unit: str):
-    """
-    Crea un grafico Highcharts live per una singola metrica.
-    Restituisce una funzione per aggiornare il grafico con un nuovo valore.
-    """
+    if series_name not in _GLOBAL_HISTORY:
+        _GLOBAL_HISTORY[series_name] = []
     
-    # Se è la primissima volta che avviamo il server, creiamo la lista per questa serie.
-    # Usiamo 'series_name' (es. 'Temp' o 'Humidity') come chiave unica.
-    if series_name not in _GLOBAL_CHART_HISTORY:
-        _GLOBAL_CHART_HISTORY[series_name] = []
-        
-    # Peschiamo lo storico salvato (se la pagina viene ricaricata, sarà pieno!)
-    history = _GLOBAL_CHART_HISTORY[series_name]
+    history = _GLOBAL_HISTORY[series_name]
 
-    with ui.card().classes('w-full h-80 lg:h-96 shadow-lg bg-white rounded-xl p-4 mt-4'):
+    with ui.card().classes('w-full h-80 shadow-lg bg-white p-4 mt-4'):
         chart = ui.highchart({
             'title': {'text': title},
-            'chart': {'type': 'spline', 'backgroundColor': 'transparent'},
-            'xAxis': {'type': 'datetime', 'title': {'text': 'Tempo (Mars UTC)'}},
-            'yAxis': {'title': {'text': f"{title} ({unit})"}, 'labels': {'format': '{value}' + unit}},
-            'legend': {'enabled': False},
+            'chart': {'type': 'spline', 'animation': False},
+            'xAxis': {'type': 'datetime', 'title': {'text': 'Tempo'}},
+            'yAxis': {'title': {'text': f"{series_name} ({unit})"}},
             'series': [{
                 'name': series_name,
-                # PRECARICHIAMO I DATI! Quando torni sulla pagina, il grafico si disegna subito
-                'data': list(history), 
+                'data': list(history), # Carica subito i dati esistenti
                 'color': color,
-                'tooltip': {'valueSuffix': f" {unit}"}
             }],
         }).classes('w-full h-full')
 
-    def update_chart(new_val):
-        """Funzione restituita per l'aggiornamento live."""
-        if new_val is not None:
-            now_ts = time.time() * 1000 # Highcharts vuole millisecondi
-            
-            # Aggiungiamo il dato alla nostra lista globale
-            history.append([now_ts, new_val])
-            
-            # Mantieni lo storico leggero (max 40 punti)
-            if len(history) > 40:
+    def update_chart(new_val, broker_timestamp=None):
+        if new_val is None:
+            return
+
+        try:
+            # --- 1. CONVERSIONE VALORE ---
+            val_float = float(new_val)
+
+            # --- 2. CONVERSIONE TEMPO (Il punto critico) ---
+            if broker_timestamp:
+                if isinstance(broker_timestamp, datetime):
+                    now_ts = broker_timestamp.timestamp() * 1000
+                elif isinstance(broker_timestamp, str):
+                    # Gestisce stringhe ISO tipo "2026-03-08T16:23:03..."
+                    dt_str = broker_timestamp.replace(' ', 'T').replace('Z', '')
+                    now_ts = datetime.fromisoformat(dt_str.split('.')[0]).timestamp() * 1000
+                else:
+                    now_ts = float(broker_timestamp) * 1000 if float(broker_timestamp) < 1e11 else float(broker_timestamp)
+            else:
+                now_ts = time.time() * 1000
+
+            # --- 3. AGGIORNAMENTO ---
+            history.append([now_ts, val_float])
+            history.sort(key=lambda x: x[0]) # Ordina per tempo
+
+            if len(history) > 50:
                 history.pop(0)
 
-            # Applichiamo i dati aggiornati al grafico
-            chart.options['series'][0]['data'] = history
+            # Forza l'aggiornamento della UI
+            chart.options['series'][0]['data'] = list(history)
             chart.update()
+            
+            # DEBUG: Se vedi questo nel terminale, il grafico STA ricevendo dati!
+            # print(f"📈 CHART {series_name}: {val_float} at {now_ts}")
+
+        except Exception as e:
+            print(f"❌ Errore aggiornamento grafico {series_name}: {e}")
 
     return update_chart
