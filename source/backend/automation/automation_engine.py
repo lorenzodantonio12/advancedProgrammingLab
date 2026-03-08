@@ -98,7 +98,7 @@ def receive_event(event: StandardFormat):
 def trigger_actuator(name: str, state: str):
     print(f"sending to actuator {name} command {state}")
 
-    if latest_actuator_state[name] == state:
+    if latest_actuator_state.get(name) == state:
         return
 
     message = f'{{"actuator": "{name}", "state": "{state}"}}'
