@@ -76,7 +76,7 @@ def setup_dashboard_page(navigation_bar_func):
             'mars/telemetry/solar_array': ('Solar Panels', 'solar_power', '#ff9900'),
             'mars/telemetry/power_bus': ('Power Bus', 'electrical_services', '#ffcc00'),
             'mars/telemetry/power_consumption': ('Power Consumption', 'electric_bolt', '#ff0000'),
-            'mars/telemetry/radiation': ('Radiation', 'radar', '#aa00ff'),
+            'mars/telemetry/radiation': ('Radiation', 'radio', '#aa00ff'),
             'mars/telemetry/life_support': ('Life Support', 'favorite', '#00cc00'),
             'mars/telemetry/thermal_loop': ('Thermal Loop', 'severe_cold', '#0066ff'),
             'mars/telemetry/airlock': ('Airlock', 'meeting_room', '#999999'),

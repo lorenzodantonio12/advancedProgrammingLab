@@ -65,10 +65,6 @@ def get_latest_sensor_data():
     return [event.model_dump() for event in latest_sensor_data.values()]
 
 def get_telemetry_stream_mock():
-    """
-    FIX: Aggiunta per evitare ImportError.
-    Mappa i dati dei sensori reali nel formato richiesto dai widget telemetria.
-    """
     result = {}
     for event in latest_sensor_data.values():
         topic = f"mars/telemetry/{event.id}"
@@ -80,13 +76,7 @@ def get_telemetry_stream_mock():
         }
     return result
 
-def get_initial_actuators_state():
-    return {
-        "cooling_fan": "OFF",
-        "entrance_humidifier": "OFF",
-        "hall_ventilation": "OFF",
-        "habitat_heater": "OFF"
-    }
+
 
 # --- CHIAMATE ALL'AUTOMATION ENGINE ---
 
@@ -113,20 +103,37 @@ def delete_rule(rule_id):
         return r.status_code == 200
     except Exception: return False
 
+_GLOBAL_ACTUATOR_STATE = {
+    'cooling_fan': 'OFF',
+    'entrance_humidifier': 'OFF',
+    'hall_ventilation': 'OFF',
+    'habitat_heater': 'OFF'
+}
+
+def get_initial_actuators_state():
+    """Restituisce lo stato salvato nella memoria globale del frontend"""
+    return _GLOBAL_ACTUATOR_STATE
+
 def set_actuator_state(actuator_id: str, state: str):
-    """
-    Invia il comando al servizio Automation.
-    URL: http://automation:8000/api/set-actuator?actuator_id=...&state=...
-    """
+    """Invia il comando al TUO backend e aggiorna la memoria"""
     try:
-        # Nota: usiamo 'params' perché FastAPI legge actuator_id e state dalla Query String
+        # ECCOLA QUI: La TUA rotta esatta!
         r = requests.post(
             f"{AUTOMATION_URL}/api/set-actuator", 
             params={"actuator_id": actuator_id, "state": state}, 
             timeout=2
         )
-        print(f"[DEBUG] Invio comando {actuator_id}={state}. Status: {r.status_code}")
-        return r.status_code == 200
+        
+        # Se il backend risponde "actuator set to ON/OFF" (status 200)
+        if r.status_code == 200:
+            # Salviamo l'informazione nella memoria globale
+            _GLOBAL_ACTUATOR_STATE[actuator_id] = state
+            print(f"✅ Comando inviato: {actuator_id} -> {state}", flush=True)
+            return True
+            
+        print(f"❌ Errore backend: {r.status_code} - {r.text}", flush=True)
+        return False
+        
     except Exception as e:
-        print(f"[DEBUG] Errore connessione Automation: {e}")
+        print(f"❌ Eccezione API set_actuator: {e}", flush=True)
         return False
