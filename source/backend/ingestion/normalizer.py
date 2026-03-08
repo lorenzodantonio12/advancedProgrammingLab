@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 from pydantic import BaseModel
 
 class StandardFormat(BaseModel):
@@ -7,65 +7,80 @@ class StandardFormat(BaseModel):
     metric: str
     timestamp: datetime
     value: float
-    unit: Optional[str] = None
+    unit: str
     origin: str
-    status: Optional[str] = None
+    status: str
 
-def map_to_standard(sensor_id: str, raw_data: dict, schema_family: str) -> StandardFormat:
-    # 1. Mappa Unità completa per tutti i sensori
-    units = {
-        "greenhouse_temperature": "°C",
-        "entrance_humidity": "%",
-        "co2_hall": "ppm",
-        "hydroponic_ph": "pH",
-        "water_tank_level": "%",
-        "corridor_pressure": "Pa",
-        "air_quality_pm25": "µg/m³",
-        "air_quality_voc": "ppb",
-        "radiation": "uSv/h",
-        "solar_array": "W",
-        "power_consumption": "W",
-        "power_bus": "V",
-        "life_support": "%",
-        "thermal_loop": "°C",
-        "airlock": "bar"
-    }
-
-    # 2. Estrazione Valore numerico
+def map_to_standard(sensor_id: str, raw_data: Any, schema_family: str) -> StandardFormat:
+    """
+    Normalizzatore basato sui contratti v1.2.0 del Mars IoT Simulator.
+    """
     value = 0.0
-    if isinstance(raw_data, dict):
-        if "value" in raw_data and float(raw_data["value"]) > 1000000:
-             value = round((float(raw_data["value"]) % 100) / 10, 2)
-        else:
-            for v in raw_data.values():
-                if isinstance(v, (int, float)):
-                    value = float(v)
-                    break
-    elif isinstance(raw_data, (int, float)):
-        value = float(raw_data)
+    unit = "N/A"
+    
+    # 1. LOGICA DI ESTRAZIONE VALORE BASATA SULLA STRUTTURA DEL JSON
+    if not isinstance(raw_data, dict):
+        return None # Errore nel dato grezzo
 
-    # 3. Logica differenziata per gli ID
-    # Verifichiamo se il sensore è della telemetria tecnica
-    is_telemetry = sensor_id.startswith("mars_telemetry_")
+    # Caso A: rest.scalar.v1 (Greenhouse Temp, CO2, ecc.) o environment.v1 con metric/value
+    if "value" in raw_data:
+        value = float(raw_data["value"])
+        unit = raw_data.get("unit", "N/A")
+
+    # Caso B: rest.chemistry.v1 o topic.environment.v1 (Dati annidati in array)
+    elif "measurements" in raw_data:
+        # Prendiamo la prima misura disponibile nell'array
+        m = raw_data["measurements"][0]
+        value = float(m["value"])
+        unit = m.get("unit", "N/A")
+
+    # Caso C: rest.particulate.v1 (PM2.5)
+    elif "pm25_ug_m3" in raw_data:
+        value = float(raw_data["pm25_ug_m3"])
+        unit = "µg/m³"
+
+    # Caso D: rest.level.v1 (Water Tank)
+    elif "level_pct" in raw_data:
+        value = float(raw_data["level_pct"])
+        unit = "%"
+
+    # Caso E: topic.power.v1 (Solar Array, Power Consumption)
+    elif "power_kw" in raw_data:
+        value = float(raw_data["power_kw"])
+        unit = "kW"
+
+    # Caso F: topic.thermal_loop.v1
+    elif "temperature_c" in raw_data:
+        value = float(raw_data["temperature_c"])
+        unit = "°C"
+
+    # Caso G: topic.airlock.v1
+    elif "cycles_per_hour" in raw_data:
+        value = float(raw_data["cycles_per_hour"])
+        unit = "cycles/h"
+
+    # 2. GESTIONE ID PER IL FRONTEND
+    # Puliamo l'ID solo se è Telemetria SSE (inizia con mars/telemetry/)
+    # I sensori REST rimangono col nome del contratto (es: greenhouse_temperature)
+    is_telemetry = sensor_id.startswith("mars/telemetry/") or sensor_id.startswith("mars_telemetry_")
     
     if is_telemetry:
-        # Per SSE: puliamo l'ID (es: radiation) per il CHECK 3
-        final_id = sensor_id.replace("mars_telemetry_", "")
+        # Trasforma 'mars/telemetry/radiation' -> 'radiation'
+        final_id = sensor_id.split('/')[-1].replace("mars_telemetry_", "")
     else:
-        # Per REST: manteniamo l'ID originale (es: greenhouse_temperature)
         final_id = sensor_id
 
-    # La metrica serve al frontend per l'etichetta del widget
-    metric_name = final_id.replace("mars_telemetry_", "")
+    # La metrica è il nome dell'ID normalizzato
+    metric_name = final_id
 
     return StandardFormat(
         id=final_id,
         metric=metric_name,
         timestamp=datetime.now(),
         value=round(value, 2),
-        unit=units.get(sensor_id, units.get(final_id, "N/A")),
+        unit=unit,
         origin=schema_family,
-        status="OK"
+        status=raw_data.get("status", "ok").upper()
     )
 
 def to_json(data: StandardFormat) -> str:
