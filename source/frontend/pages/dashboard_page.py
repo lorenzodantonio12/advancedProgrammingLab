@@ -87,49 +87,81 @@ def setup_dashboard_page(navigation_bar_func):
 
         # --- LOGICA 1: REST POLLING (Dati Lenti + Regole) ---
         def update_rest_data():
+            # print("⏱️ [TIMER] Tick! La funzione è partita...", flush=True) # Decommenta se vuoi vederlo sempre
             try:
                 raw = get_latest_sensor_data()
-                if not raw: return
+                
+                if not raw:
+                    print("⚠️ [ATTENZIONE] Nessun dato sensore disponibile. Salto le regole.", flush=True)
+                    return
 
+                # 1. Raggruppamento dati e aggiornamento Widget Sensori
                 grouped = {}
                 for e in raw:
                     sid = e['id']
-                    if sid not in grouped: grouped[sid] = []
+                    if sid not in grouped: 
+                        grouped[sid] = []
                     grouped[sid].append(e)
+                    
                     if sid in sensor_updaters:
-                        sensor_updaters[sid](f"{e['value']} {e['unit'] or ''}")
+                        sensor_updaters[sid](f"{e['value']} {e.get('unit', '')}")
 
-                # Update Grafici
+                # 2. Update Grafici Highcharts
                 t = next((e['value'] for e in raw if e['id'] == 'greenhouse_temperature'), None)
                 h = next((e['value'] for e in raw if e['id'] == 'entrance_humidity'), None)
                 update_temp_chart(t)
                 update_hum_chart(h)
 
-                # Motore Regole
-                for rule in get_rules():
-                    if rule['sensor'] in grouped:
-                        val = float(grouped[rule['sensor']][0]['value'])
-                        target = float(rule['value'])
-                        op = rule['operator']
+                # 3. Motore Regole (Allineato con l'API del Backend)
+                rules = get_rules()
+                
+                if not isinstance(rules, list):
+                    print(f"❌ [ERRORE API] get_rules non ha restituito una lista! Ricevuto: {rules}", flush=True)
+                    return
+
+                for rule in rules:
+                    # ORA USIAMO LE CHIAVI ESATTE DEL BACKEND
+                    sensor_name = rule.get('sensor_name')
+                    
+                    if not sensor_name:
+                        print(f"⚠️ [WARNING] Regola ignorata perché manca 'sensor_name': {rule}", flush=True)
+                        continue 
+                        
+                    if sensor_name in grouped:
+                        val = float(grouped[sensor_name][0]['value'])
+                        target = float(rule.get('value', 0))
+                        op = rule.get('operator')
                         trigger = False
+                        
+                        # Valutazione della logica
                         if op == '>': trigger = val > target
                         elif op == '<': trigger = val < target
                         elif op == '>=': trigger = val >= target
                         elif op == '<=': trigger = val <= target
                         elif op == '=': trigger = val == target
                         
-                        if trigger and rule['actuator'] in act_updaters:
-                            # Chiamata all'attuatore via UI per feedback visivo
-                            act_updaters[rule['actuator']].set_value(rule['action'] == 'ON')
-            except Exception as e:
-                print(f"Polling error: {e}")
+                        print(f"🛑 REGOLE: Valuto {sensor_name} ({val}) {op} {target} -> SCATTA? {trigger}", flush=True)
+                        
+                        # USIAMO LE CHIAVI ESATTE DEL BACKEND PER ATTUATORE E STATO
+                        actuator_name = rule.get('actuator_name')
+                        action = rule.get('state') # Il backend lo chiama 'state' (ON/OFF)
 
+                        # Se la regola è vera, invia il comando all'attuatore
+                        if trigger and actuator_name in act_updaters:
+                            print(f"⚡ TRIGGER! Aziono {actuator_name} -> {action}", flush=True)
+                            act_updaters[actuator_name].update_from_rule(action)
+                            
+            except Exception as e:
+                # Questo blocco è FONDAMENTALE per non far crashare tutto il timer se c'è un dato strano
+                print(f"❌ [ERRORE FATALE] Errore durante update_rest_data: {e}", flush=True)
+                
+                
         # --- LOGICA 2: WEBSOCKET LISTENER (Dati Real-time) ---
         async def ws_listener():
             while True:
                 try:
                     t_stream = await get_next_push_event()
-                    print(f"🛑 CHECK 2 (DASHBOARD): Pescato dalla coda -> {t_stream}", flush=True)
+                    #print(f"🛑 CHECK 2 (DASHBOARD): Pescato dalla coda -> {t_stream}", flush=True)
                     # Caso 1: Arriva un singolo evento (StandardFormat)
                     if isinstance(t_stream, dict) and 'id' in t_stream:
                         topic = f"mars/telemetry/{t_stream['id']}"

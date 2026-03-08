@@ -17,7 +17,7 @@ def TelemetryWidget(title: str, icon_name: str, color: str):
         labels = {}
 
         def update_data(data):
-            print(f"🛑 CHECK 3 (WIDGET {title}): Ricevuto -> {data}", flush=True)
+            #print(f"🛑 CHECK 3 (WIDGET {title}): Ricevuto -> {data}", flush=True)
             if not isinstance(data, dict):
                 return
 

@@ -26,7 +26,7 @@ class TelemetryListener(stomp.ConnectionListener):
 
     def on_message(self, frame):
         try:
-            print(f"🛑 CHECK 1 (API): Arrivato da ActiveMQ -> {frame.body}", flush=True)
+            #print(f"🛑 CHECK 1 (API): Arrivato da ActiveMQ -> {frame.body}", flush=True)
             data = json.loads(frame.body)
             event = StandardFormat(**data)
             

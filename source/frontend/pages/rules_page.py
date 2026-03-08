@@ -1,13 +1,16 @@
 from nicegui import ui
 from services.api import get_rules, add_rule, delete_rule
 
-
 # Sensor and actuator icons/names mapping
 SENSOR_ICONS = {
     'greenhouse_temperature': ('thermostat', 'Greenhouse Temp', 'red'),
     'entrance_humidity': ('water_drop', 'Entrance Humidity', 'blue'),
     'co2_hall': ('co2', 'Corridor CO2', 'green'),
-    'water_tank_level': ('waves', 'Water Tank', 'cyan'),
+    'corridor_pressure': ('compress', 'Corridor Pressure', 'purple'),
+    'hydroponic_ph': ('science', 'Hydroponic pH', 'teal'),
+    'air_quality_voc': ('air', 'Air Quality VOC', 'orange'),
+    'air_quality_pm25': ('blur_on', 'Air Quality PM2.5', 'gray'),
+    'water_tank_level': ('waves', 'Water Tank Level', 'cyan'),
 }
 
 ACTUATOR_ICONS = {
@@ -73,6 +76,7 @@ def setup_rules_page(navigation_bar_func):
                 # Save button
                 def save_rule():
                     if all([s.value, o.value, v.value, a.value, av.value]):
+                        # Nota: Assicurati che api.py chiami il backend con le chiavi corrette (sensor_name, actuator_name, state)
                         add_rule(s.value, o.value, v.value, a.value, av.value)
                         ui.notify('✓ Rule created!', position='top', type='positive')
                         s.set_value(sens_list[0] if sens_list else None)
@@ -100,9 +104,13 @@ def setup_rules_page(navigation_bar_func):
             
             with ui.column().classes('w-4/5 mx-auto gap-4'):
                 for r in rules:
-                    sen_icon, sen_name, sen_col = SENSOR_ICONS.get(r['sensor_name'], ('sensor', r['sensor_name'], 'gray'))
-                    act_icon, act_name, act_col = ACTUATOR_ICONS.get(r['actuator_name'], ('outlet', r['actuator_name'], 'gray'))
-                    op_icon, op_desc = OPERATOR_ICONS.get(r['operator'], ('help', r['operator']))
+                    # Legge i dati usando le chiavi del backend (sensor_name, actuator_name, state)
+                    sen_key = r.get('sensor_name', '')
+                    act_key = r.get('actuator_name', '')
+                    
+                    sen_icon, sen_name, sen_col = SENSOR_ICONS.get(sen_key, ('sensors', sen_key, 'gray'))
+                    act_icon, act_name, act_col = ACTUATOR_ICONS.get(act_key, ('outlet', act_key, 'gray'))
+                    op_icon, op_desc = OPERATOR_ICONS.get(r.get('operator', ''), ('help', r.get('operator', '')))
                     
                     with ui.card().classes('w-full p-5 bg-white shadow-md border-l-4 border-blue-500 hover:shadow-lg transition'):
                         with ui.row().classes('w-full items-center justify-between gap-6 flex-wrap'):
@@ -116,8 +124,8 @@ def setup_rules_page(navigation_bar_func):
                             # Operator and value
                             with ui.row().classes('items-center gap-2'):
                                 ui.icon(op_icon).classes(f'text-xl text-purple-600')
-                                ui.label(r['operator']).classes('font-bold text-lg text-purple-700')
-                                ui.label(r['value']).classes('font-mono bg-gray-100 px-3 py-1 rounded text-gray-800')
+                                ui.label(r.get('operator', '')).classes('font-bold text-lg text-purple-700')
+                                ui.label(str(r.get('value', ''))).classes('font-mono bg-gray-100 px-3 py-1 rounded text-gray-800')
                             
                             # Arrow
                             ui.label('→').classes('text-2xl font-bold text-gray-400')
@@ -130,13 +138,14 @@ def setup_rules_page(navigation_bar_func):
                                     ui.label(act_name).classes('font-semibold text-gray-800')
                             
                             # Action
-                            action_color = 'green' if r['state'] == 'ON' else 'red'
+                            action_state = r.get('state', 'OFF')
+                            action_color = 'green' if action_state == 'ON' else 'red'
                             with ui.row().classes(f'items-center gap-2 px-3 py-2 rounded-lg bg-{action_color}-100'):
                                 ui.icon('power_settings_new').classes(f'text-xl text-{action_color}-600')
-                                ui.label(r['state']).classes(f'font-bold text-{action_color}-700')
+                                ui.label(action_state).classes(f'font-bold text-{action_color}-700')
                             
                             # Delete button
-                            def delete_rule_handler(rule_id=r['id_rule']):
+                            def delete_rule_handler(rule_id=r.get('id_rule')):
                                 delete_rule(rule_id)
                                 ui.notify('✓ Rule deleted', position='top', type='info')
                                 table.refresh()
