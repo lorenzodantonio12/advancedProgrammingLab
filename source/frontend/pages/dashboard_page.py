@@ -21,30 +21,41 @@ def setup_dashboard_page(navigation_bar_func):
         navigation_bar_func()
         
         # --- 1. SENSORI ---
-        ui.label('Environmental Sensors').classes('text-2xl font-bold w-full text-center mt-6 text-gray-800')
+        # 🟢 TITOLO ANIMATO: Radar pulsante
+        with ui.row().classes('w-full justify-center items-center gap-2 mt-6'):
+            ui.image('/assets/multiple-sensor.gif').classes('w-16 h-16')
+            ui.label('Environmental Sensors').classes('text-2xl font-bold text-gray-800')
+            
         sensor_updaters = {}
         multi_updaters = {}
         
         with ui.row().classes('w-full justify-center gap-4 p-4 flex-wrap'):
-            # 🟢 SENSORI SINGOLI (rest.scalar.v1)
             sensor_updaters['greenhouse_temperature'] = SensorWidget('Greenhouse Temp', 'thermostat', 'red')
             sensor_updaters['entrance_humidity'] = SensorWidget('Entrance Humidity', 'water_drop', 'blue')
             sensor_updaters['co2_hall'] = SensorWidget('Corridor CO2', 'co2', 'green')
             sensor_updaters['corridor_pressure'] = SensorWidget('Corridor Pressure', 'compress', 'purple')
             sensor_updaters['hydroponic_ph'] = SensorWidget('Hydroponic pH', 'science', 'teal')
 
-            # 🟢 SENSORI MULTIPLI (Spostati pH e VOC qui perché usano rest.chemistry.v1)
             multi_updaters['air_quality_voc'] = MultiSensorWidget('Air Quality VOC', 'air', 'orange')
             multi_updaters['air_quality_pm25'] = MultiSensorWidget('Particulate (PM)', 'blur_on', 'grey')
             multi_updaters['water_tank_level'] = MultiSensorWidget('Water Tank', 'waves', 'cyan')
 
         # --- 2. GRAFICI ---
+        # 🟢 TITOLO ANIMATO: Grafico che rimbalza leggermente
+        with ui.row().classes('w-full justify-center items-center gap-2 mt-8'):
+            ui.image('/assets/wave-graph.gif').classes('w-16 h-16')
+            ui.label('Data Graphs').classes('text-2xl font-bold text-gray-800')
+            
         with ui.row().classes('w-full gap-4 p-4 justify-center flex-wrap lg:flex-nowrap'):
-            update_temp_chart = SingleChartFactory('Temperature Trend', 'Temp', '#ef4444', '°C')
-            update_hum_chart = SingleChartFactory('Humidity Trend', 'Humidity', '#3b82f6', '%')
+            update_temp_chart = SingleChartFactory('Temperature Graph', 'Temp', '#ef4444', '°C')
+            update_hum_chart = SingleChartFactory('Humidity Graph', 'Humidity', '#3b82f6', '%')
 
         # --- 3. ATTUATORI ---
-        ui.label('Actuators Control').classes('text-2xl font-bold w-full text-center mt-8 text-gray-800')
+        # 🟢 TITOLO ANIMATO: Ingranaggio che gira
+        with ui.row().classes('w-full justify-center items-center gap-2 mt-8'):
+            ui.image('/assets/switch.gif').classes('w-16 h-16')
+            ui.label('Actuators Control').classes('text-2xl font-bold text-gray-800')
+            
         act_states = get_initial_actuators_state() or {}
         act_updaters = {}
         with ui.row().classes('w-full justify-center gap-4 p-4 flex-wrap'):
@@ -54,7 +65,11 @@ def setup_dashboard_page(navigation_bar_func):
             act_updaters['habitat_heater'] = ActuatorWidget('Heater', 'fireplace', 'orange', 'habitat_heater', act_states.get('habitat_heater', 'OFF'))
 
         # --- 4. TELEMETRIA ---
-        ui.label('Live Telemetry').classes('text-2xl font-bold w-full text-center mt-8 text-gray-800')
+        # 🟢 TITOLO ANIMATO: Antenna di trasmissione pulsante
+        with ui.row().classes('w-full justify-center items-center gap-2 mt-8'):
+            ui.image('/assets/space-station.gif').classes('w-16 h-16')
+            ui.label('Live Telemetry').classes('text-2xl font-bold text-gray-800')
+            
         tel_updaters = {}
         tel_defs = {
             'solar_array': ('Solar Panels', 'solar_power', '#ff9900'),
@@ -68,7 +83,7 @@ def setup_dashboard_page(navigation_bar_func):
         with ui.row().classes('w-full justify-center gap-4 p-4 flex-wrap'):
             for eid, (name, icon, col) in tel_defs.items():
                 tel_updaters[eid] = TelemetryWidget(name, icon, col)
-
+        page_client = ui.context.client
         # --- 🚀 WEBSOCKET LISTENER ---
         async def ws_listener():
             history = get_latest_sensor_data()
@@ -123,14 +138,11 @@ def setup_dashboard_page(navigation_bar_func):
                         if current_rules:
                             for rule in current_rules:
                                 if rule.get('sensor_name') in [e_id, metric]:
-                                    
-                                    # 🟢 FIX ANTI-CRASH: Se arriva "PRESSURIZING", float() va in errore.
-                                    # Lo blocchiamo col try/except così la dashboard non muore.
                                     try:
                                         v_float = float(val)
                                         target = float(rule.get('value', 0))
                                     except (ValueError, TypeError):
-                                        continue # Salta questa regola e va alla prossima
+                                        continue 
                                         
                                     op = rule.get('operator')
                                     
@@ -152,8 +164,11 @@ def setup_dashboard_page(navigation_bar_func):
                                             if current_ui_str != target_state:
                                                 print(f"⚡ [AUTOMAZIONE] Scatto: {metric}({v_float}) {op} {target} -> {act_id}:{target_state}", flush=True)
                                                 set_actuator_state(act_id, target_state)
-                                                act_updaters[act_id].update_from_rule(target_state)
-                        
+                                                
+                                                # 🟢 FIX 2: Usiamo il 'page_client' che abbiamo salvato fuori dal loop
+                                                with page_client:
+                                                    act_updaters[act_id].update_from_rule(target_state)
+                                                    #ui.notify(f"⚡ Automazione: {act_id.replace('_', ' ').title()} -> {target_state}", color='warning', icon='bolt', position='top')
                         # Feedback Attuatori
                         if e_id in act_updaters:
                             act_updaters[e_id].update_from_rule(str(val))

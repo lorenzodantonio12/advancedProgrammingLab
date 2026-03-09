@@ -33,4 +33,4 @@ class ActuatorWidget:
         target_bool = (new_state_str == 'ON')
         if self.switch.value != target_bool:
             self.switch.value = target_bool
-            ui.notify(f"⚡ Automazione: {self.name} -> {new_state_str}", color='warning', icon='bolt')
+            ui.notify(f"Automation: {self.name} -> {new_state_str}", color='warning', icon='bolt')
