@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Optional, Any, List
 from pydantic import BaseModel
-# Assicurati che da te il percorso di import sia corretto
 from models import StandardFormat
 
 def map_to_standard(sensor_id: str, raw_data: Any, schema_family: str) -> List[StandardFormat]:
@@ -23,7 +22,6 @@ def map_to_standard(sensor_id: str, raw_data: Any, schema_family: str) -> List[S
     results = []
 
     def add_metric(metric_name: str, value: Any, unit: str):
-        # 🟢 FIX MAGICO: Se è un numero lo arrotondiamo, se è testo (es. "PRESSURIZING") lo lasciamo stringa!
         try:
             final_val = round(float(value), 2)
         except (ValueError, TypeError):
@@ -72,15 +70,12 @@ def map_to_standard(sensor_id: str, raw_data: Any, schema_family: str) -> List[S
 
         # --- Caso F: topic.thermal_loop.v1 ---
         elif schema_family == "topic.thermal_loop.v1":
-            # 🟢 Aggiunto il loop come stringa
-            #if "loop" in raw_data: add_metric("loop", raw_data["loop"], "")
             if "temperature_c" in raw_data: add_metric("temperature", raw_data["temperature_c"], "°C")
             if "flow_l_min" in raw_data: add_metric("flow", raw_data["flow_l_min"], "L/min")
 
         # --- Caso G: topic.airlock.v1 ---
         elif schema_family == "topic.airlock.v1":
             if "cycles_per_hour" in raw_data: add_metric("cycles_per_hour", raw_data["cycles_per_hour"], "cycles/h")
-            # 🟢 Aggiunto last_state per il check "PRESSURIZING"
             if "last_state" in raw_data: add_metric("last_state", raw_data["last_state"], "")
 
     except (ValueError, TypeError) as e:
