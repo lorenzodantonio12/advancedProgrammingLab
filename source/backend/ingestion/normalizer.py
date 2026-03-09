@@ -17,24 +17,36 @@ def map_to_standard(sensor_id: str, raw_data: Any, schema_family: str) -> List[S
         final_id = sensor_id
 
     status_val = raw_data.get("status", "ok").upper()
-    timestamp_now = datetime.now() # Per dare a tutte le metriche dello stesso pacchetto lo stesso timestamp
+
+    time_str = raw_data.get("captured_at") or raw_data.get("event_time")
+
+    if time_str:
+        try:
+            # 2. Converte la stringa ISO (es. "2026-03-09T01:26:47Z") in un oggetto datetime
+            timestamp_val = datetime.fromisoformat(time_str.replace('Z', '+00:00'))
+        except ValueError:
+            timestamp_val = datetime.now()
+    else:
+        timestamp_val = datetime.now()
 
     results = []
 
-    def add_metric(metric_name: str, value: Any, unit: str):
+    def add_metric(metric_name: str, value: Any, unit: str, possible_status: str = None):
         try:
             final_val = round(float(value), 2)
         except (ValueError, TypeError):
             final_val = str(value)
 
+        final_status = possible_status if possible_status else status_val
+
         results.append(StandardFormat(
             id=final_id,
             metric=metric_name,
-            timestamp=timestamp_now,
+            timestamp=timestamp_val,
             value=final_val,
             unit=unit,
             origin=schema_family,
-            status=status_val
+            status=possible_status
         ))
 
     try:
@@ -75,11 +87,19 @@ def map_to_standard(sensor_id: str, raw_data: Any, schema_family: str) -> List[S
 
         # --- Caso G: topic.airlock.v1 ---
         elif schema_family == "topic.airlock.v1":
-            if "cycles_per_hour" in raw_data: add_metric("cycles_per_hour", raw_data["cycles_per_hour"], "cycles/h")
-            if "last_state" in raw_data: add_metric("last_state", raw_data["last_state"], "")
+            airlock_state = raw_data.get("last_state", "UNKNOWN")
+            
+            if "cycles_per_hour" in raw_data: 
+                add_metric("cycles_per_hour", raw_data["cycles_per_hour"], "cycles/h", possible_status=airlock_state)
 
     except (ValueError, TypeError) as e:
         print(f"❌ Errore di parsing su {final_id}: {e}")
+
+    if results:
+        print(f"\n🔍 [NORMALIZZATORE] Dati pronti per {final_id}:", flush=True)
+        for r in results:
+            # model_dump() trasforma l'oggetto Pydantic in un dizionario facile da leggere
+            print(f"   -> {r.model_dump()}", flush=True)
 
     return results
 

@@ -6,7 +6,7 @@ class StandardFormat(BaseModel):
     id: str        # Esempio: greenhouse_temperature
     metric: str    # Esempio: temperature, ph, co2...
     timestamp: datetime
-    value: Union[float, str]
+    value: float
     unit: Optional[str] = None
     origin: str    # La famiglia dello schema (es: rest.scalar.v1)
     status: Optional[str] = None
