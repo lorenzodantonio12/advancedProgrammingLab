@@ -112,6 +112,14 @@ def add_rule(sensor, metric, operator, value, actuator, action):
         return r.status_code == 200
     except Exception: return False
 
+def edit_rule(rule_id, update_data):
+    """Invia al backend i campi modificati della regola"""
+    try:
+        r = requests.patch(f"{AUTOMATION_URL}/api/update-rule/{rule_id}", json=update_data, timeout=1)
+        return r.status_code == 200
+    except Exception: 
+        return False
+
 def delete_rule(rule_id):
     try:
         r = requests.delete(f"{AUTOMATION_URL}/api/delete-rule/{rule_id}", timeout=1)

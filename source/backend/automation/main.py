@@ -42,6 +42,15 @@ def createRule(rule: AutomationRule):
     id = crud.create_rule(rule)
     return {"message": "rule created!", "id_rule": id}
 
+@app.patch("/api/update-rule/{rule_id}")
+def updateRule(rule_id: int, update_data: dict):
+    success = crud.update_rule(rule_id, update_data)
+    
+    if success:
+        return {"message": f"rule {rule_id} updated successfully!"}
+    else:
+        raise HTTPException(status_code=400, detail="Impossibile aggiornare la regola. Dati non validi o ID inesistente.")
+
 @app.delete("/api/delete-rule/{id_rule}")
 def deleteRule(id_rule: int):
     crud.delete_rule(id_rule)

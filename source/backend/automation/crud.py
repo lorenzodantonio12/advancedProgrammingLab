@@ -37,9 +37,34 @@ def update_rule(id_rule: int, data: dict):
     
     columns = {"operator", "value", "metric", "actuator_name", "state"}
 
-    valid_data = 3
-    
+    valid_data = {k: v for k, v in data.items() if k in columns}
 
+    if not valid_data:
+        return False
+    
+    string = []
+    values = []
+
+    for key, val in valid_data.items():
+        string.append(f"{key} = ?")
+        values.append(val)
+
+    values.append(id_rule)
+
+    s = ",".join(string)
+
+    query = f"UPDATE rules SET {s} WHERE id_rule = ?"
+
+    with sqlite3.connect(db) as conn:
+        cursor = conn.cursor()
+
+        params = tuple(values)
+
+        cursor.execute(query, params)
+
+        conn.commit()
+
+        return cursor.rowcount > 0
     
 def delete_rule(id_rule: int):
     with sqlite3.connect(db) as conn:

@@ -47,7 +47,7 @@ REST_SENSOR_METRICS = {
     'co2_hall': ['co2_ppm'],
     'corridor_pressure': ['pressure_kpa'],
     'hydroponic_ph': ['ph'], 
-    'air_quality_voc': ['voc_ppb', 'co2e_ppm'], # Guarda qui! C'era anche la CO2 equivalente!
+    'air_quality_voc': ['voc_ppb', 'co2e_ppm'],
     'air_quality_pm25': ['pm1', 'pm25', 'pm10'],
     'water_tank_level': ['level_pct', 'level_liters'],
 }
@@ -160,6 +160,7 @@ def setup_rules_page(navigation_bar_func):
                     # Legge i dati usando le chiavi del backend (sensor_name, actuator_name, state)
                     sen_key = r.get('sensor_name', '')
                     act_key = r.get('actuator_name', '')
+                    metric_key = r.get('metric', '') 
                     
                     sen_icon, sen_name, sen_col = SENSOR_ICONS.get(sen_key, ('sensors', sen_key, 'gray'))
                     act_icon, act_name, act_col = ACTUATOR_ICONS.get(act_key, ('outlet', act_key, 'gray'))
@@ -167,12 +168,13 @@ def setup_rules_page(navigation_bar_func):
                     
                     with ui.card().classes('w-full p-5 bg-white shadow-md border-l-4 border-blue-500 hover:shadow-lg transition'):
                         with ui.row().classes('w-full items-center justify-between gap-6 flex-wrap'):
-                            # Sensor
+                            # Sensor and metric
                             with ui.row().classes('items-center gap-2'):
                                 ui.icon(sen_icon).classes(f'text-2xl text-{sen_col}-600')
-                                with ui.column().classes('gap-1'):
+                                with ui.column().classes('gap-0'):
                                     ui.label('IF').classes('text-xs font-bold text-gray-500 uppercase')
                                     ui.label(sen_name).classes('font-semibold text-gray-800')
+                                    ui.label(metric_key).classes('text-xs text-blue-500 font-mono') 
                             
                             # Operator and value
                             with ui.row().classes('items-center gap-2'):
@@ -197,12 +199,52 @@ def setup_rules_page(navigation_bar_func):
                                 ui.icon('power_settings_new').classes(f'text-xl text-{action_color}-600')
                                 ui.label(action_state).classes(f'font-bold text-{action_color}-700')
                             
-                            # Delete button
-                            def delete_rule_handler(rule_id=r.get('id_rule')):
-                                delete_rule(rule_id)
-                                ui.notify('✓ Rule deleted', position='top', type='info')
-                                table.refresh()
-                            
-                            ui.button(icon='delete_outline', on_click=delete_rule_handler).props('flat round').classes('text-red-600 hover:bg-red-50')
+                            # Delete and update button
+
+                            with ui.row().classes('gap-2'):
+                                # Funzione per aprire il popup di modifica
+                                def open_edit(rule=r):
+                                    with ui.dialog() as dialog, ui.card().classes('p-6'):
+                                        ui.label('Edit Rule').classes('text-xl font-bold mb-4')
+                                        
+                                        # Campi modificabili (pre-popolati con i valori attuali)
+                                        edit_op = ui.select(list(OPERATOR_ICONS.keys()), label='Operator', value=rule.get('operator')).classes('w-full mb-2')
+                                        edit_val = ui.input(label='Value', value=str(rule.get('value'))).classes('w-full mb-2')
+                                        edit_act = ui.select(list(ACTUATOR_ICONS.keys()), label='Actuator', value=rule.get('actuator_name')).classes('w-full mb-2')
+                                        edit_state = ui.select(['ON', 'OFF'], label='Action', value=rule.get('state')).classes('w-full mb-4')
+                                        
+                                        def save_changes():
+                                            update_data = {
+                                                "operator": edit_op.value,
+                                                "value": float(edit_val.value),
+                                                "actuator_name": edit_act.value,
+                                                "state": edit_state.value
+                                            }
+                                            # Importa edit_rule da services.api in alto nel file!
+                                            from services.api import edit_rule
+                                            if edit_rule(rule.get('id_rule'), update_data):
+                                                ui.notify('✓ Rule updated', type='positive')
+                                                dialog.close()
+                                                table.refresh()
+                                            else:
+                                                ui.notify('⚠ Error updating rule', type='negative')
+                                                
+                                        with ui.row().classes('w-full justify-end gap-2'):
+                                            ui.button('Cancel', on_click=dialog.close).props('flat')
+                                            ui.button('Save', on_click=save_changes).classes('bg-blue-600 text-white')
+                                            
+                                    dialog.open()
+
+                                # Bottone Modifica
+                                ui.button(icon='edit', on_click=open_edit).props('flat round').classes('text-blue-600 hover:bg-blue-50')
+                                
+                                # Bottone Elimina (già esistente)
+                                def delete_rule_handler(rule_id=r.get('id_rule')):
+                                    delete_rule(rule_id)
+                                    ui.notify('✓ Rule deleted', position='top', type='info')
+                                    table.refresh()
+                                
+                                ui.button(icon='delete_outline', on_click=delete_rule_handler).props('flat round').classes('text-red-600 hover:bg-red-50')
+
         
         table()
