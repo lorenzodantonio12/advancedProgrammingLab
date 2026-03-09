@@ -2,7 +2,7 @@ from nicegui import ui
 from services.api import get_rules, add_rule, delete_rule
 
 # Sensor and actuator icons/names mapping
-SENSOR_ICONS = {
+REST_SENSOR_ICONS = {
     'greenhouse_temperature': ('thermostat', 'Greenhouse Temp', 'red'),
     'entrance_humidity': ('water_drop', 'Entrance Humidity', 'blue'),
     'co2_hall': ('co2', 'Corridor CO2', 'green'),
@@ -12,6 +12,18 @@ SENSOR_ICONS = {
     'air_quality_pm25': ('blur_on', 'Air Quality PM2.5', 'gray'),
     'water_tank_level': ('waves', 'Water Tank Level', 'cyan'),
 }
+
+TELEMETRY_ICONS = {
+    'solar_array': ('solar_power', 'Solar Panels', 'orange'),
+    'radiation': ('radar', 'Radiation', 'purple'),
+    'life_support': ('favorite', 'Life Support', 'green'),
+    'thermal_loop': ('severe_cold', 'Thermal Loop', 'blue'),
+    'power_bus': ('electrical_services', 'Power Bus', 'yellow'),
+    'power_consumption': ('electric_bolt', 'Power Consumption', 'red'),
+    'airlock': ('meeting_room', 'Airlock', 'gray'),
+}
+
+SENSOR_ICONS = {**REST_SENSOR_ICONS, **TELEMETRY_ICONS}
 
 ACTUATOR_ICONS = {
     'cooling_fan': ('ac_unit', 'Cooling Fan', 'blue'),
@@ -29,7 +41,7 @@ OPERATOR_ICONS = {
 }
 
 
-SENSOR_METRICS = {
+REST_SENSOR_METRICS = {
     'greenhouse_temperature': ['temperature_c'],
     'entrance_humidity': ['humidity_pct'],
     'co2_hall': ['co2_ppm'],
@@ -39,6 +51,18 @@ SENSOR_METRICS = {
     'air_quality_pm25': ['pm1', 'pm25', 'pm10'],
     'water_tank_level': ['level_pct', 'level_liters'],
 }
+
+TELEMETRY_METRICS = {
+    'solar_array': ['power_kw', 'voltage_v', 'current_a', 'cumulative_kwh'],
+    'power_bus': ['power_kw', 'voltage_v', 'current_a', 'cumulative_kwh'],
+    'power_consumption': ['power_kw', 'voltage_v', 'current_a', 'cumulative_kwh'],
+    'radiation': ['radiation_uSv_h'],
+    'life_support': ['oxygen_percent'],
+    'thermal_loop': ['temperature', 'flow'],
+    'airlock': ['cycles_per_hour'],
+}
+
+SENSOR_METRICS = {**REST_SENSOR_METRICS, **TELEMETRY_METRICS}
 
 def setup_rules_page(navigation_bar_func):
     """Setup the rules management page"""

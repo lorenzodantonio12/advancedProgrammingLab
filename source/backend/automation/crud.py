@@ -30,6 +30,17 @@ def create_rule(rule: AutomationRule):
 
         return cursor.lastrowid
     
+def update_rule(id_rule: int, data: dict):
+
+    if not data:
+        return False
+    
+    columns = {"operator", "value", "metric", "actuator_name", "state"}
+
+    valid_data = 3
+    
+
+    
 def delete_rule(id_rule: int):
     with sqlite3.connect(db) as conn:
         cursor = conn.cursor()
