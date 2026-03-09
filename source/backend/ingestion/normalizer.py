@@ -1,9 +1,8 @@
 from datetime import datetime
 from typing import Optional, Any, List
 from pydantic import BaseModel
+# Assicurati che da te il percorso di import sia corretto
 from models import StandardFormat
-
-
 
 def map_to_standard(sensor_id: str, raw_data: Any, schema_family: str) -> List[StandardFormat]:
     
@@ -11,7 +10,6 @@ def map_to_standard(sensor_id: str, raw_data: Any, schema_family: str) -> List[S
         return [] # Errore nel dato grezzo
     
     # Puliamo l'ID solo se è Telemetria SSE (inizia con mars/telemetry/)
-    # I sensori REST rimangono col nome del contratto (es: greenhouse_temperature)
     is_telemetry = sensor_id.startswith("mars/telemetry/") or sensor_id.startswith("mars_telemetry_")
     if is_telemetry:
         # Trasforma 'mars/telemetry/radiation' -> 'radiation'
@@ -20,64 +18,73 @@ def map_to_standard(sensor_id: str, raw_data: Any, schema_family: str) -> List[S
         final_id = sensor_id
 
     status_val = raw_data.get("status", "ok").upper()
-    timestamp_now = datetime.now() #nel caso ci siano più misure per fare avere a tutte lo stesso timestamp
+    timestamp_now = datetime.now() # Per dare a tutte le metriche dello stesso pacchetto lo stesso timestamp
 
     results = []
 
-    def add_metric(metric_name: str, value: float, unit: str):
+    def add_metric(metric_name: str, value: Any, unit: str):
+        # 🟢 FIX MAGICO: Se è un numero lo arrotondiamo, se è testo (es. "PRESSURIZING") lo lasciamo stringa!
+        try:
+            final_val = round(float(value), 2)
+        except (ValueError, TypeError):
+            final_val = str(value)
+
         results.append(StandardFormat(
             id=final_id,
             metric=metric_name,
             timestamp=timestamp_now,
-            value=round(float(value), 2),
+            value=final_val,
             unit=unit,
             origin=schema_family,
             status=status_val
         ))
 
     try:
-
-        # Caso A: rest.scalar.v1 (Greenhouse Temp, CO2, ecc.) o environment.v1 con metric/value
-        if (schema_family == "rest.scalar.v1"):
+        # --- Caso A: rest.scalar.v1 (Greenhouse Temp, CO2, ecc.) ---
+        if schema_family == "rest.scalar.v1":
             add_metric(raw_data.get("metric", final_id), raw_data.get("value", 0.0), raw_data.get("unit", "N/A"))
 
-        # Caso B: rest.chemistry.v1 o topic.environment.v1 (Dati annidati in array)
-        elif (schema_family in ["rest.chemistry.v1", "topic.environment.v1"]):
-            # Prendiamo tutte le misure disponibili nell'array
-
+        # --- Caso B: rest.chemistry.v1 o topic.environment.v1 (Array measurements) ---
+        elif schema_family in ["rest.chemistry.v1", "topic.environment.v1"]:
+            # pH idroponico, VOC, Radiazioni e Supporto vitale
             for m in raw_data.get("measurements", []):
                 add_metric(m.get("metric", "unknown"), m.get("value", 0.0), m.get("unit", "N/A"))
 
-        # Caso C: rest.particulate.v1 (PM2.5)
-        elif (schema_family == "rest.particulate.v1"):
+        # --- Caso C: rest.particulate.v1 (PM2.5) ---
+        elif schema_family == "rest.particulate.v1":
             if "pm1_ug_m3" in raw_data: add_metric("pm1", raw_data["pm1_ug_m3"], "µg/m³")
             if "pm25_ug_m3" in raw_data: add_metric("pm25", raw_data["pm25_ug_m3"], "µg/m³")
             if "pm10_ug_m3" in raw_data: add_metric("pm10", raw_data["pm10_ug_m3"], "µg/m³")
 
-        # Caso D: rest.level.v1 (Water Tank)
+        # --- Caso D: rest.level.v1 (Water Tank) ---
         elif schema_family == "rest.level.v1":
             if "level_pct" in raw_data: add_metric("level_pct", raw_data["level_pct"], "%")
             if "level_liters" in raw_data: add_metric("level_liters", raw_data["level_liters"], "L")
 
-        # Caso E: topic.power.v1 (Solar Array, Power Consumption)
+        # --- Caso E: topic.power.v1 (Solar Array, Power Bus, Power Consumption) ---
         elif schema_family == "topic.power.v1":
+
+            
             if "power_kw" in raw_data: add_metric("power_kw", raw_data["power_kw"], "kW")
             if "voltage_v" in raw_data: add_metric("voltage_v", raw_data["voltage_v"], "V")
             if "current_a" in raw_data: add_metric("current_a", raw_data["current_a"], "A")
             if "cumulative_kwh" in raw_data: add_metric("cumulative_kwh", raw_data["cumulative_kwh"], "kWh")
 
-        # Caso F: topic.thermal_loop.v1
+        # --- Caso F: topic.thermal_loop.v1 ---
         elif schema_family == "topic.thermal_loop.v1":
+            # 🟢 Aggiunto il loop come stringa
+            #if "loop" in raw_data: add_metric("loop", raw_data["loop"], "")
             if "temperature_c" in raw_data: add_metric("temperature", raw_data["temperature_c"], "°C")
             if "flow_l_min" in raw_data: add_metric("flow", raw_data["flow_l_min"], "L/min")
 
-        # Caso G: topic.airlock.v1
+        # --- Caso G: topic.airlock.v1 ---
         elif schema_family == "topic.airlock.v1":
             if "cycles_per_hour" in raw_data: add_metric("cycles_per_hour", raw_data["cycles_per_hour"], "cycles/h")
-
+            # 🟢 Aggiunto last_state per il check "PRESSURIZING"
+            if "last_state" in raw_data: add_metric("last_state", raw_data["last_state"], "")
 
     except (ValueError, TypeError) as e:
-        print(f"Errore di parsing su {final_id}: {e}")
+        print(f"❌ Errore di parsing su {final_id}: {e}")
 
     return results
 
