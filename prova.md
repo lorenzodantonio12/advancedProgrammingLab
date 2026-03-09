@@ -2,6 +2,19 @@
 
 Mars Habitat Control is an integrated IoT platform designed to monitor and automate environmental conditions within a simulated Martian habitat. The system acquires heterogeneous telemetry via REST protocols and SSE streams, normalizes the data into a single standard format to power an automation rules engine and a real-time web dashboard, while simultaneously allowing for both automatic and manual control of actuators.
 
+---
+
+### ARCHITECTURAL JUSTIFICATION: DECOUPLED INGESTION SERVICES
+
+The Ingestion and Actuation logic has been intentionally distributed across three separate containers (`rest-poller`, `stream-subscriber`, and `actuator-executor`) instead of a single monolithic container. This architectural choice is based on these principles:
+
+1.  **Fault Isolation and Reliability**: Each service handles a different communication protocol (REST Polling, SSE Streaming, and STOMP Consumption). By separating them, a network failure or a crash in the real-time streaming service (`stream-subscriber`) does not affect the environmental monitoring (`rest-poller`) or the ability to send commands (`actuator-executor`).
+2.  **Scalability**: Discrete containers allow for independent scaling. If the number of REST sensors increases, more instances of the `rest-poller` can be deployed without wasting resources on additional streamers or executors.
+3.  **Specific Resource Management**: The `stream-subscriber` maintains persistent connections which are memory-heavy, while the `rest-poller` is CPU-bound during its cyclic bursts. Separate containers allow Docker to manage and limit resources specifically for each task's needs.
+4.  **Logging and Observability**: Decoupling the services provides clean, isolated log streams for each process, significantly simplifying debugging and system health monitoring during habitat operations.
+
+---
+
 # CONTAINERS:
 
 ## CONTAINER_NAME: rest-poller
