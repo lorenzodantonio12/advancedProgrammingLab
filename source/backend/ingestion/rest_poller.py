@@ -27,13 +27,14 @@ def start_polling():
             try:
                 response = requests.get(f"{BASE_URL}/{sensor_id}")
                 if response.status_code == 200:
-                    standard_data = map_to_standard(sensor_id, response.json(), schema)
+                    standard_data_list = map_to_standard(sensor_id, response.json(), schema)
                     
-                    # 1. Stampa per controllo x
-                    print(f"NORMALIZED: {standard_data.id} = {standard_data.value}")
-                    
-                    # 2. Invio al broker
-                    broker.send_message("mars_telemetry", standard_data.model_dump_json())
+                    for standard_data in standard_data_list:
+                        # 1. Stampa per controllo x
+                        print(f"NORMALIZED: {standard_data.id} = {standard_data.value}")
+                        
+                        # 2. Invio al broker
+                        broker.send_message("mars_telemetry", standard_data.model_dump_json())
 
             except Exception as e:
                 print(f"Errore su {sensor_id}: {e}")

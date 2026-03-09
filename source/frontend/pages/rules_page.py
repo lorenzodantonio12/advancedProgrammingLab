@@ -29,6 +29,17 @@ OPERATOR_ICONS = {
 }
 
 
+SENSOR_METRICS = {
+    'greenhouse_temperature': ['temperature_c'],
+    'entrance_humidity': ['humidity_pct'],
+    'co2_hall': ['co2_ppm'],
+    'corridor_pressure': ['pressure_kpa'],
+    'hydroponic_ph': ['ph'], 
+    'air_quality_voc': ['voc_ppb', 'co2e_ppm'], # Guarda qui! C'era anche la CO2 equivalente!
+    'air_quality_pm25': ['pm1', 'pm25', 'pm10'],
+    'water_tank_level': ['level_pct', 'level_liters'],
+}
+
 def setup_rules_page(navigation_bar_func):
     """Setup the rules management page"""
     
@@ -49,6 +60,22 @@ def setup_rules_page(navigation_bar_func):
                 with ui.column().classes('gap-2'):
                     ui.icon('sensors').classes('text-3xl text-blue-600')
                     s = ui.select(sens_list, label='Sensor', value=sens_list[0] if sens_list else None).classes('w-56')
+
+                #metric section
+                with ui.column().classes('gap-2'):
+                    ui.icon('straighten').classes('text-3xl text-indigo-600')
+                    # All'inizio mostra le metriche del primo sensore selezionato
+                    m_select = ui.select(SENSOR_METRICS[s.value], label='Metric', value=SENSOR_METRICS[s.value][0]).classes('w-40')
+
+                #metriche a seconda del sensore
+                def update_metrics(e):
+                    # e.value è il nuovo sensore scelto
+                    nuove_metriche = SENSOR_METRICS[e.value]
+                    m_select.options = nuove_metriche
+                    m_select.value = nuove_metriche[0] # Seleziona in automatico la prima
+                    m_select.update()
+                
+                s.on_value_change(update_metrics)
                 
                 # Operator section
                 with ui.column().classes('gap-2'):
@@ -75,9 +102,11 @@ def setup_rules_page(navigation_bar_func):
                 
                 # Save button
                 def save_rule():
-                    if all([s.value, o.value, v.value, a.value, av.value]):
+                    if all([s.value, m_select.value, o.value, v.value, a.value, av.value]):
                         # Nota: Assicurati che api.py chiami il backend con le chiavi corrette (sensor_name, actuator_name, state)
-                        add_rule(s.value, o.value, v.value, a.value, av.value)
+
+
+                        add_rule(s.value, m_select.value, o.value, v.value, a.value, av.value)
                         ui.notify('✓ Rule created!', position='top', type='positive')
                         s.set_value(sens_list[0] if sens_list else None)
                         o.set_value('>')

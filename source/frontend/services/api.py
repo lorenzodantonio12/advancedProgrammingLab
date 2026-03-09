@@ -30,7 +30,7 @@ class TelemetryListener(stomp.ConnectionListener):
             event = StandardFormat(**data)
             
             # Aggiorna cache locale
-            key = f"{event.id}" 
+            key = f"{event.id}_{event.metric}" 
             latest_sensor_data[key] = event
             
             if self.loop:
@@ -86,10 +86,10 @@ def get_rules():
     except Exception:
         return []
 
-def add_rule(sensor, operator, value, actuator, action):
+def add_rule(sensor, metric, operator, value, actuator, action):
     rule = {
-        "sensor_name": sensor, "operator": operator, "value": float(value),
-        "actuator_name": actuator, "state": action, "metric": "valore_automatico"
+        "sensor_name": sensor, "metric": metric, "operator": operator, "value": float(value),
+        "actuator_name": actuator, "state": action
     }
     try:
         r = requests.post(f"{AUTOMATION_URL}/api/create-rule", json=rule, timeout=1)

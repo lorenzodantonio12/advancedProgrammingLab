@@ -48,11 +48,13 @@ def listen_to_topic(topic, broker):
                             raw_event = json.loads(json_str)
                             
                             # Normalizzazione
-                            standard_data = map_to_standard(sensor_id, raw_event, family)
+                            standard_data_list = map_to_standard(sensor_id, raw_event, family)
+
+                            for standard_data in standard_data_list:
                             
-                            # Log e invio al Broker (ActiveMQ)
-                            print(f"📥 [STREAM] {sensor_id}: {standard_data.value} {standard_data.unit} \n")
-                            broker.send_message("mars_telemetry", standard_data.model_dump_json())
+                                # Log e invio al Broker (ActiveMQ)
+                                print(f"📥 [STREAM] {sensor_id}: {standard_data.value} {standard_data.unit} \n")
+                                broker.send_message("mars_telemetry", standard_data.model_dump_json())
             else:
                 print(f"⚠️ Topic {topic} non disponibile (Status: {response.status_code})")
                 time.sleep(10)

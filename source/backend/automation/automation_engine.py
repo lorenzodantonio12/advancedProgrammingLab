@@ -11,22 +11,15 @@ except Exception as e:
 
 def receive_event(event: StandardFormat):
 
-    latest_sensor_state[event.id] = event
-    print("memoria aggiornata")
+    key = f"{event.id}_{event.metric}" #perché senno da problemi
+
+    latest_sensor_state[key] = event
     
     rules = crud.get_rules()
 
-
-    print(event.value, event.metric, event.id)
-
     for r in rules:
 
-
-
-
-
         if (r.sensor_name == event.id and r.metric == event.metric):
-
 
             condition = False
 
