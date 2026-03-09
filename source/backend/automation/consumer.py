@@ -30,12 +30,10 @@ def start_listening(host='activemq', port=61613, queue_name='mars_telemetry'):
             print(f"Tentativo di connessione ad ActiveMQ (Consumer) su {host}:{port}...")
             conn.connect(wait=True)
             
-            # Iscriviti alla coda dove Persona 1 sta scrivendo
             conn.subscribe(destination=f'/topic/{queue_name}', id=1, ack='auto')
             
             connected = True
-            print(f"In ascolto sulla coda /topic/{queue_name}...")
-
+            
             return conn
         
         except Exception as e:

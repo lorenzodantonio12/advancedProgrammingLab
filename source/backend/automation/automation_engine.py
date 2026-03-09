@@ -3,15 +3,15 @@ from models import StandardFormat
 from cache import latest_sensor_state, latest_actuator_state
 from broker_client import BrokerClient
 
-command_broker = BrokerClient(host='activemq') # 'activemq' su Docker
+command_broker = BrokerClient(host='activemq')
 try:
     command_broker.connect()
 except Exception as e:
-    print("Avviso: Broker per i comandi non ancora connesso.")
+    print("Broker non ancora connesso.")
 
 def receive_event(event: StandardFormat):
 
-    key = f"{event.id}_{event.metric}" #perché senno da problemi
+    key = f"{event.id}_{event.metric}"
 
     latest_sensor_state[key] = event
     
@@ -41,7 +41,6 @@ def receive_event(event: StandardFormat):
     
 
 def trigger_actuator(name: str, state: str):
-    print(f"sending to actuator {name} command {state}")
 
     if latest_actuator_state.get(name) == state:
         return
@@ -57,4 +56,4 @@ def trigger_actuator(name: str, state: str):
 
         print(f"stato di {name} cambiato a {state}")
     else:
-        print("broker non connesso")
+        print("Broker non connesso")
