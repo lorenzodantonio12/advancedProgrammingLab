@@ -1,15 +1,15 @@
-1) As a user, I want to see all the sensors in a compact way
-2) As a user, I want to see the values given by every sensors
-3) As a user, I want to see charts of the sensors' data
-4) As a user, I want to see the status of each sensor
-5) As a user, I want to see the current state of every actuator
-6) As a user, I want to manually change the state of the actuators
-7) As a user, I want to see all the existing rules in a dedicated page
-8) As a user, I want to create a new rule
-9) As a user, I want to modify an existing rule
-10) As a user, I want to delete a rule
-11) As a user, I want all the rules to be saved persistently
-12) As a user, I want to be notified when an actuator turns on/off because of a rule
-13) As a user, I want that if a rule I'm creating contradicts an existing one it doesn't get created
-14) As a user, I want that if a rule I'm modifying contradicts an existing one it doesn't get modified
-15) As a user, I want to get notified when I successfully create, modify or delete a rule
+1) As a user, I want to view all the sensors and their live telemetry in a compact dashboard
+2) As a user, I want to see clear visual status indicators for each sensor
+3) As a user, I want to read the real-time values and unit of measurements for every metric
+4) As a user, I want to view historical data charts for key metrics
+5) As a user, I want to view the current state (ON/OFF) of every actuator 
+6) As a user, I want to manually toggle the state of the actuators
+7) As a user, I want to be visually notified when an actuator changes state due to a rule
+8) As a user, I want to see a dedicated page with a list of all active automation rules
+9) As a user, I want to create a new rule
+10) As a user, I want to modify the parameters of an existing rule
+11) As a user, I want to delete a rule
+12) As a user, I want all the rules to be saved automatically in a persistent database
+13) As a user, I want the system to automatically block the creation of a new rule if its logic overlaps with an existing one
+14) As a user, I want the system to automatically block the modification of a rule if the updated parameters conflict with another existing rule
+15) As a user, I want to be visually notified when I create, modify or delete a rule
