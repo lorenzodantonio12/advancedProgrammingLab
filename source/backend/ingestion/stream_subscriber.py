@@ -17,12 +17,10 @@ TOPICS = [
 ]
 
 def listen_to_topic(topic, broker):
-    # Endpoint SSE come da specifica: /api/telemetry/stream/{topic}
+    # Endpoint SSE
     url = f"http://simulator:8080/api/telemetry/stream/{topic}"
-    # Creiamo un ID interno unico sostituendo gli slash
     sensor_id = topic.replace("/", "_")
     
-    # Determiniamo la schema family dal bando per la documentazione
     schema_map = {
         "solar_array": "topic.power.v1",
         "radiation": "topic.environment.v1",

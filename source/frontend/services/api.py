@@ -60,26 +60,21 @@ def get_latest_sensor_data():
     return [event.model_dump() for event in latest_sensor_data.values()]
 
 def get_initial_actuators_state():
-    # Il nostro paracadute di sicurezza: tutti gli attuatori a OFF
     actuators = ['cooling_fan', 'entrance_humidifier', 'hall_ventilation', 'habitat_heater']
     fallback_state = {act_id: 'OFF' for act_id in actuators}
     
     try:
-        # Proviamo a chiedere al backend gli stati reali salvati in memoria/DB
         url = f"{AUTOMATION_URL.rstrip('/')}/api/get-actuator-state"
         r = requests.get(url, timeout=2)
         
         if r.status_code == 200:
             data = r.json()
-            # Se il backend ci risponde con dati validi (non vuoti), usiamo quelli!
             if data:
                 return data
                 
     except Exception as e:
-        # Se c'è un errore (es. backend spento), stampiamo un warning ma non blocchiamo nulla
         print(f"⚠️ Errore recupero stati attuatori, uso il fallback a OFF. Dettaglio: {e}", flush=True)
         
-    # Se la chiamata è fallita, o il server ha dato errore, ritorniamo il paracadute
     return fallback_state
 
 def set_actuator_state(actuator_id: str, state: str):
@@ -93,7 +88,7 @@ def set_actuator_state(actuator_id: str, state: str):
     except Exception:
         return False
 
-# --- REGOLE (Queste invece devono restare collegate al DB di Automation) ---
+# --- REGOLE ---
 
 def get_rules():
     try:

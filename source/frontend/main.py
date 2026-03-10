@@ -29,10 +29,8 @@ def start_background_workers():
     Ci garantisce di usare il loop asincrono corretto (quello di Uvicorn/NiceGUI).
     """
     try:
-        # Recuperiamo il loop asincrono ATTIVO
         loop = asyncio.get_running_loop()
         
-        # Avviamo il thread per ActiveMQ passandogli il loop "vivo"
         t = threading.Thread(
             target=start_telemetry_consumer, 
             args=(loop,), 
@@ -43,16 +41,15 @@ def start_background_workers():
     except Exception as e:
         print(f"❌ [ERRORE FATALE] Impossibile avviare i worker: {e}", flush=True)
 
-# Registriamo la funzione all'avvio dell'applicazione
 app.on_startup(start_background_workers)
 
-app.add_static_files('/assets', './assets')  # Per servire eventuali file statici (es: immagini, css custom...)
+app.add_static_files('/assets', './assets')  # Per servire eventuali file statici
 
 # Avvio del server NiceGUI
 ui.run(
     host='0.0.0.0', 
     port= 8081, 
-    reload= False, # Fondamentale tenere False con Docker e Thread per evitare task zombie
+    reload= False, # per evitare task zombie
     title= "Mars Control System",
     favicon = './assets/mars.png'
 )

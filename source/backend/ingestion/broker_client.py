@@ -3,15 +3,12 @@ import time
 
 class BrokerClient:
     def __init__(self, host='activemq', port=61613):
-        # Usiamo 'activemq' come host perché in Docker Compose i container 
-        # si chiamano per nome, non 'localhost'
         self.host = host
         self.port = port
         self.conn = stomp.Connection([(self.host, self.port)])
         self.connected = False
 
     def connect(self):
-        # Tentiamo la connessione finché non riusciamo
         while not self.connected:
             try:
                 print(f"Tentativo di connessione ad ActiveMQ su {self.host}:{self.port}...")
@@ -26,7 +23,6 @@ class BrokerClient:
     def send_message(self, queue_name, message_json):
         try:
             self.conn.send(body=message_json, destination=f'/topic/{queue_name}')
-            # Questo è quello che hai chiesto: stampa SEMPRE quando invia
             print(f" [SEND] -> Coda: {queue_name} | Data: {message_json[:50]}...")
         except Exception as e:
             print(f"Errore invio messaggio: {e}")

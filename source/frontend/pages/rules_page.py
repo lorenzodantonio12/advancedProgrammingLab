@@ -1,5 +1,5 @@
 from nicegui import ui
-from services.api import get_rules, add_rule, delete_rule
+from services.api import get_rules, add_rule, delete_rule, edit_rule
 
 # Sensor and actuator icons/names mapping
 REST_SENSOR_ICONS = {
@@ -127,8 +127,6 @@ def setup_rules_page(navigation_bar_func):
                 # Save button
                 def save_rule():
                     if all([s.value, m_select.value, o.value, v.value, a.value, av.value]):
-                        # Nota: Assicurati che api.py chiami il backend con le chiavi corrette (sensor_name, actuator_name, state)
-
 
                         success = add_rule(s.value, m_select.value, o.value, v.value, a.value, av.value)
 
@@ -211,7 +209,7 @@ def setup_rules_page(navigation_bar_func):
                                     with ui.dialog() as dialog, ui.card().classes('p-6'):
                                         ui.label('Edit Rule').classes('text-xl font-bold mb-4')
                                         
-                                        # Campi modificabili (pre-popolati con i valori attuali)
+                                        # Campi modificabili
                                         edit_op = ui.select(list(OPERATOR_ICONS.keys()), label='Operator', value=rule.get('operator')).classes('w-full mb-2')
                                         edit_val = ui.input(label='Value', value=str(rule.get('value'))).classes('w-full mb-2')
                                         edit_act = ui.select(list(ACTUATOR_ICONS.keys()), label='Actuator', value=rule.get('actuator_name')).classes('w-full mb-2')
@@ -224,8 +222,6 @@ def setup_rules_page(navigation_bar_func):
                                                 "actuator_name": edit_act.value,
                                                 "state": edit_state.value
                                             }
-                                            # Importa edit_rule da services.api in alto nel file!
-                                            from services.api import edit_rule
 
                                             success, message = edit_rule(rule.get('id_rule'), update_data)
 
@@ -250,7 +246,7 @@ def setup_rules_page(navigation_bar_func):
                                 # Bottone Modifica
                                 ui.button(icon='edit', on_click=open_edit).props('flat round').classes('text-blue-600 hover:bg-blue-50')
                                 
-                                # Bottone Elimina (già esistente)
+                                # Bottone Elimina 
                                 def delete_rule_handler(rule_id=r.get('id_rule')):
                                     delete_rule(rule_id)
                                     ui.notify('✓ Rule deleted', position='top', type='info')

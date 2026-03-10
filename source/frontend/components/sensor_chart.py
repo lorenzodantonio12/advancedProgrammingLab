@@ -32,7 +32,7 @@ def SingleChartFactory(title: str, series_name: str, color: str, unit: str):
             # --- 1. CONVERSIONE VALORE ---
             val_float = float(new_val)
 
-            # --- 2. CONVERSIONE TEMPO (Il punto critico) ---
+            # --- 2. CONVERSIONE TEMPO ---
             if broker_timestamp:
                 if isinstance(broker_timestamp, datetime):
                     now_ts = broker_timestamp.timestamp() * 1000
@@ -55,9 +55,6 @@ def SingleChartFactory(title: str, series_name: str, color: str, unit: str):
             # Forza l'aggiornamento della UI
             chart.options['series'][0]['data'] = list(history)
             chart.update()
-            
-            # DEBUG: Se vedi questo nel terminale, il grafico STA ricevendo dati!
-            # print(f"📈 CHART {series_name}: {val_float} at {now_ts}")
 
         except Exception as e:
             print(f"❌ Errore aggiornamento grafico {series_name}: {e}")

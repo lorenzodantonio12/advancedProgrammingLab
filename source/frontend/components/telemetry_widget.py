@@ -1,8 +1,7 @@
 from nicegui import ui
 
 def TelemetryWidget(title: str, icon_name: str, color: str):
-    # 🟢 MODIFICA QUI: Cambiato h-48 in h-64 (circa 256px di altezza). 
-    # Se li vuoi ancora più giganti puoi mettere h-72 o h-80!
+    
     with ui.card().classes('h-72 w-72 items-center shadow-lg p-4 border-t-4 flex-col').style(f'border-color: {color}'):
         
         # Header con icona e pallino LIVE lampeggiante
@@ -12,7 +11,7 @@ def TelemetryWidget(title: str, icon_name: str, color: str):
             
         ui.label(title).classes('text-md font-bold text-gray-700 text-center w-full leading-tight')
         
-        # Contenitore dati: l'altezza extra darà molto più respiro a questa lista
+        # Contenitore dati
         data_container = ui.column().classes('w-full items-center justify-start flex-grow overflow-y-auto scrollbar-hide mt-2 gap-1')
 
         status_badge = ui.label('OK').classes('text-[11px] font-bold px-2 py-1 rounded bg-green-100 text-green-700 w-full text-center mt-auto tracking-wide')

@@ -4,10 +4,8 @@ from cache import latest_sensor_state, latest_actuator_state
 from broker_client import BrokerClient
 
 command_broker = BrokerClient(host='activemq')
-try:
-    command_broker.connect()
-except Exception as e:
-    print("Broker non ancora connesso.")
+command_broker.connect()
+
 
 def receive_event(event: StandardFormat):
 
