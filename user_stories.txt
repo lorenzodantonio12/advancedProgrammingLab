@@ -13,3 +13,19 @@
 13) As a user, I want the system to automatically block the creation of a new rule if its logic overlaps with an existing one
 14) As a user, I want the system to automatically block the modification of a rule if the updated parameters conflict with another existing rule
 15) As a user, I want to be visually notified when I create, modify or delete a rule
+
+
+
+Dimenticate "Data Processor" e "API Gateway". I vostri veri blocchi (i container Docker) sono questi 6:Mars Simulator: Il simulatore fornito dai prof.Ingestion Service: 
+Il vostro rest_poller.py.Message Broker: ActiveMQ.Backend (FastAPI + Automation Engine): Il vostro main.py, crud.py e automation_engine.py (tutto questo vive in un unico
+ blocco!).Database: Il file SQLite.Frontend: Il vostro applicativo NiceGUI (dashboard_page.py).🔄 Come interagiscono? (Le Frecce e i Protocolli)Per prendere il massimo dei voti,
+  dovete scrivere sulle frecce del diagramma il protocollo esatto che state usando. Ecco il flusso vitale del vostro sistema:1. Raccolta Dati (Da Marte al Sistema)Mars 
+  Simulator $\rightarrow$ Ingestion Service: Comunicano tramite HTTP REST (Polling) oppure SSE (Server-Sent Events), a seconda di come avete impostato il poller per leggere i 
+  sensori.Ingestion Service $\rightarrow$ Message Broker: Il poller prende i dati e li spara ad ActiveMQ tramite il protocollo STOMP (usando la libreria stomp.py).2. 
+  Elaborazione e Automazione (Il Cuore)Message Broker $\rightarrow$ Backend (Automation Engine): Il vostro consumer.py è iscritto al broker e riceve i messaggi in tempo 
+  reale sempre tramite STOMP.Backend $\leftrightarrow$ Database: Il motore delle regole comunica con SQLite tramite Local I/O (query SQL dirette tramite sqlite3). Nessuna 
+  rete qui, è una lettura su file!3. Azionamento (Dal Sistema a Marte)Backend $\rightarrow$ Mars Simulator: Se una regola scatta (o l'utente clicca un bottone), il vostro 
+  trigger_actuator nel backend fa una chiamata HTTP POST/PUT (REST) verso l'API del simulatore per accendere/spegnere l'attuatore.4. Visualizzazione (Interfaccia Utente)Frontend
+   $\leftrightarrow$ Backend: Qui c'è la magia di NiceGUI. Il frontend comunica con il backend in due modi:HTTP REST: Per le azioni classiche (es. salvare una regola, chiedere 
+   lo stato iniziale, inviare un comando manuale all'attuatore).WebSockets / SSE: Il famoso ws_listener nel vostro dashboard_page.py mantiene una connessione aperta 
+   (tramite asyncio) per ricevere in "push" i nuovi dati dal backend e aggiornare i grafici e le icone senza ricaricare la pagina web.
