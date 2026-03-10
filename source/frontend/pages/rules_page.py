@@ -130,14 +130,18 @@ def setup_rules_page(navigation_bar_func):
                         # Nota: Assicurati che api.py chiami il backend con le chiavi corrette (sensor_name, actuator_name, state)
 
 
-                        add_rule(s.value, m_select.value, o.value, v.value, a.value, av.value)
-                        ui.notify('✓ Rule created!', position='top', type='positive')
-                        s.set_value(sens_list[0] if sens_list else None)
-                        o.set_value('>')
-                        v.set_value('')
-                        a.set_value(act_list[0] if act_list else None)
-                        av.set_value('ON')
-                        table.refresh()
+                        success = add_rule(s.value, m_select.value, o.value, v.value, a.value, av.value)
+
+                        if success:
+                            ui.notify('✓ Rule created!', position='top', type='positive')
+                            s.set_value(sens_list[0] if sens_list else None)
+                            o.set_value('>')
+                            v.set_value('')
+                            a.set_value(act_list[0] if act_list else None)
+                            av.set_value('ON')
+                            table.refresh()
+                        else:
+                            ui.notify('⚠ Conflict detected! This rule overlaps with an existing one.', position='top', type='negative', timeout=5000)
                     else:
                         ui.notify('⚠ Fill all fields!', position='top', type='warning')
                 

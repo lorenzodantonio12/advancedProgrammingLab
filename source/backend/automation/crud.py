@@ -1,4 +1,5 @@
 from models import AutomationRule, StandardFormat
+from check_interval import check_overlap
 import sqlite3
 from pathlib import Path
 
@@ -20,7 +21,27 @@ def get_rules():
 
 def create_rule(rule: AutomationRule):
     with sqlite3.connect(db) as conn:
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT * FROM rules 
+            WHERE sensor_name = ? AND metric = ? AND actuator_name = ?
+        """, (rule.sensor_name, rule.metric, rule.actuator_name))
+        
+        
+        existing_rules = cursor.fetchall()
+
+        for existing in existing_rules:
+            if existing['state'] != rule.state:
+                
+                is_overlapping = check_overlap(
+                    rule.operator, rule.value, 
+                    existing['operator'], existing['value']
+                )
+                
+                if is_overlapping:
+                    return False
 
         params = (rule.sensor_name, rule.operator, rule.value, rule.metric, rule.actuator_name, rule.state)
 

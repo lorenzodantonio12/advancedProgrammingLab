@@ -40,6 +40,10 @@ def getRules():
 @app.post("/api/create-rule")
 def createRule(rule: AutomationRule):
     id = crud.create_rule(rule)
+
+    if id is False:
+        raise HTTPException(status_code = 400, detail = "Conflitto tra regole")
+    
     return {"message": "rule created!", "id_rule": id}
 
 @app.patch("/api/update-rule/{rule_id}")
