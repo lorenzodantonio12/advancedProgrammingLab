@@ -226,12 +226,20 @@ def setup_rules_page(navigation_bar_func):
                                             }
                                             # Importa edit_rule da services.api in alto nel file!
                                             from services.api import edit_rule
-                                            if edit_rule(rule.get('id_rule'), update_data):
+
+                                            success, message = edit_rule(rule.get('id_rule'), update_data)
+
+                                            if success:
                                                 ui.notify('✓ Rule updated', type='positive')
                                                 dialog.close()
                                                 table.refresh()
                                             else:
-                                                ui.notify('⚠ Error updating rule', type='negative')
+                                                if message == "conflict":
+                                                    ui.notify('⚠ Conflict detected! This rule overlaps with an existing one.', position='top', type='negative', timeout=5000)
+                                                elif message == "not_found":
+                                                    ui.notify('⚠ Rule not found in database.', position='top', type='warning')
+                                                else:
+                                                    ui.notify('⚠ Error updating rule. Check your data.', position='top', type='negative')
                                                 
                                         with ui.row().classes('w-full justify-end gap-2'):
                                             ui.button('Cancel', on_click=dialog.close).props('flat')

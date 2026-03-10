@@ -48,12 +48,16 @@ def createRule(rule: AutomationRule):
 
 @app.patch("/api/update-rule/{rule_id}")
 def updateRule(rule_id: int, update_data: dict):
-    success = crud.update_rule(rule_id, update_data)
+    success, message = crud.update_rule(rule_id, update_data)
     
     if success:
         return {"message": f"rule {rule_id} updated successfully!"}
+    if message == "conflict":
+        raise HTTPException(status_code=409, detail="Rule overlap detected")
+    elif message == "not_found":
+        raise HTTPException(status_code=404, detail="Rule not found")
     else:
-        raise HTTPException(status_code=400, detail="Impossibile aggiornare la regola. Dati non validi o ID inesistente.")
+        raise HTTPException(status_code=400, detail="Invalid data")
 
 @app.delete("/api/delete-rule/{id_rule}")
 def deleteRule(id_rule: int):

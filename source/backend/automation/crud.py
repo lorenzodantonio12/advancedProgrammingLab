@@ -61,7 +61,46 @@ def update_rule(id_rule: int, data: dict):
     valid_data = {k: v for k, v in data.items() if k in columns}
 
     if not valid_data:
-        return False
+        return False, "invalid data"
+    
+    with sqlite3.connect(db) as conn:
+        conn.row_factory = sqlite3.Row
+
+        cursor = conn.cursor()
+
+        cursor.execute("""SELECT * FROM rules WHERE id_rule = ?""", (id_rule,))
+        current_rule = cursor.fetchone()
+
+        if not current_rule:
+            return False, "not found"
+        
+        proposed_rule = dict(current_rule)
+        proposed_rule.update(valid_data)
+
+        p_sensor = proposed_rule.get('sensor_name')
+        p_metric = proposed_rule.get('metric')
+        p_actuator = proposed_rule.get('actuator_name')
+        p_state = proposed_rule.get('state')
+        p_operator = proposed_rule.get('operator')
+        p_value = proposed_rule.get('value')
+
+        params = (p_sensor, p_metric, p_actuator, id_rule)
+
+        cursor.execute("""SELECT * FROM rules
+                       WHERE sensor_name = ? AND metric = ? AND actuator_name = ? AND id_rule != ?""", params)
+
+        existing_rules = cursor.fetchall()
+
+        for existing in existing_rules:
+            if existing['state'] != p_state:
+                
+                is_overlapping = check_overlap(
+                    p_operator, p_value, 
+                    existing['operator'], existing['value']
+                )
+                
+                if is_overlapping:
+                    return False, "conflict"
     
     string = []
     values = []
@@ -85,7 +124,10 @@ def update_rule(id_rule: int, data: dict):
 
         conn.commit()
 
-        return cursor.rowcount > 0
+        if cursor.rowcount > 0:
+            return True, "success"
+        
+    return False, "error"
     
 def delete_rule(id_rule: int):
     with sqlite3.connect(db) as conn:

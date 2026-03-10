@@ -116,9 +116,17 @@ def edit_rule(rule_id, update_data):
     """Invia al backend i campi modificati della regola"""
     try:
         r = requests.patch(f"{AUTOMATION_URL}/api/update-rule/{rule_id}", json=update_data, timeout=1)
-        return r.status_code == 200
+        if r.status_code == 200:
+            return True, "success"
+        elif r.status_code == 409: 
+            return False, "conflict"
+        elif r.status_code == 404: 
+            return False, "not_found"
+        else:
+            return False, "error"
     except Exception: 
         return False
+
 
 def delete_rule(rule_id):
     try:
