@@ -37,7 +37,6 @@ def SingleChartFactory(title: str, series_name: str, color: str, unit: str):
                 if isinstance(broker_timestamp, datetime):
                     now_ts = broker_timestamp.timestamp() * 1000
                 elif isinstance(broker_timestamp, str):
-                    # Gestisce stringhe ISO tipo "2026-03-08T16:23:03..."
                     dt_str = broker_timestamp.replace(' ', 'T').replace('Z', '')
                     now_ts = datetime.fromisoformat(dt_str.split('.')[0]).timestamp() * 1000
                 else:
@@ -52,7 +51,6 @@ def SingleChartFactory(title: str, series_name: str, color: str, unit: str):
             if len(history) > 50:
                 history.pop(0)
 
-            # Forza l'aggiornamento della UI
             chart.options['series'][0]['data'] = list(history)
             chart.update()
 

@@ -2,11 +2,9 @@ import asyncio
 import threading
 from nicegui import ui, app
 
-# Import delle setup function delle pagine
 from pages.dashboard_page import setup_dashboard_page
 from pages.rules_page import setup_rules_page
 
-# Import del consumatore ActiveMQ da api.py
 from services.api import start_telemetry_consumer
 
 # --- SHARED NAVBAR BETWEEN PAGES ---
@@ -18,16 +16,11 @@ def navigation_bar():
             ui.link('Rules Engine', '/rules').classes('text-lg font-semibold text-gray-300 hover:text-white transition')
             
 
-# Inizializza le pagine passando la navbar
 setup_dashboard_page(navigation_bar)
 setup_rules_page(navigation_bar)
 
 # --- AVVIO LOGICA MULTI-THREAD (ActiveMQ + NiceGUI) ---
 def start_background_workers():
-    """
-    Questa funzione viene chiamata SOLO quando NiceGUI è completamente avviato.
-    Ci garantisce di usare il loop asincrono corretto (quello di Uvicorn/NiceGUI).
-    """
     try:
         loop = asyncio.get_running_loop()
         

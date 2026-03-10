@@ -65,7 +65,6 @@ TELEMETRY_METRICS = {
 SENSOR_METRICS = {**REST_SENSOR_METRICS, **TELEMETRY_METRICS}
 
 def setup_rules_page(navigation_bar_func):
-    """Setup the rules management page"""
     
     @ui.page('/rules')
     def rules_page():

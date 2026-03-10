@@ -6,14 +6,12 @@ class ActuatorWidget:
         self.name = name
         self.actuator_id = actuator_id
         
-        # Converte 'ON'/'OFF' dal backend in True/False
         start_val = (initial_state == 'ON')
 
         with ui.card().classes('p-4 shadow-lg items-center w-44 flex-col gap-1'):
             ui.icon(icon, color=color).classes('text-4xl mb-1')
             ui.label(name).classes('text-xs text-gray-500 uppercase tracking-wider text-center h-8')
             
-            # Impostiamo lo stato iniziale preso dal Backend
             self.switch = ui.switch(value=start_val)
             
             async def handle_toggle():
