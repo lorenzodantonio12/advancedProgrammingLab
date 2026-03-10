@@ -111,16 +111,21 @@ def setup_dashboard_page(navigation_bar_func):
                         val = e.get('value')
                         ts = e.get('timestamp')
                         unit = e.get('unit', '')
+                        status = e.get('status')
+
                         v_str = f"{val} {unit}".strip()
+
+                        if status is None or str(status).upper() == 'NONE':
+                            status = ""
 
                         # A & B. Aggiornamento Card Sensori
                         if metric in sensor_updaters:
-                            sensor_updaters[metric](v_str)
+                            sensor_updaters[metric](v_str, status)
                         elif e_id in sensor_updaters:
-                            sensor_updaters[e_id](v_str)
+                            sensor_updaters[e_id](v_str, status)
 
                         if e_id in multi_updaters:
-                            multi_updaters[e_id](metric, v_str)
+                            multi_updaters[e_id](metric, v_str, status)
 
                         # C. Grafici
                         if metric == 'greenhouse_temperature' or e_id == 'greenhouse_temperature':
@@ -131,7 +136,7 @@ def setup_dashboard_page(navigation_bar_func):
                         # D. Telemetria
                         if e_id in tel_updaters:
                             new_data = extract_telemetry_data(e)
-                            tel_updaters[e_id](new_data)
+                            tel_updaters[e_id](new_data, status)
 
                         # --- MOTORE REGOLE ---
                         current_rules = get_rules()

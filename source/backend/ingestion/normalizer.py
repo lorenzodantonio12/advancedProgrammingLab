@@ -46,7 +46,7 @@ def map_to_standard(sensor_id: str, raw_data: Any, schema_family: str) -> List[S
             value=final_val,
             unit=unit,
             origin=schema_family,
-            status=possible_status
+            status=final_status
         ))
 
     try:
