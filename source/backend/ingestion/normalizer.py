@@ -6,7 +6,7 @@ from models import StandardFormat
 def map_to_standard(sensor_id: str, raw_data: Any, schema_family: str) -> List[StandardFormat]:
     
     if not isinstance(raw_data, dict):
-        return [] # Errore nel dato grezzo
+        return [] 
     
     # Puliamo l'ID solo se è Telemetria SSE (inizia con mars/telemetry/)
     is_telemetry = sensor_id.startswith("mars/telemetry/") or sensor_id.startswith("mars_telemetry_")
@@ -96,9 +96,7 @@ def map_to_standard(sensor_id: str, raw_data: Any, schema_family: str) -> List[S
         print(f"❌ Errore di parsing su {final_id}: {e}")
 
     if results:
-        print(f"\n🔍 [NORMALIZZATORE] Dati pronti per {final_id}:", flush=True)
         for r in results:
-            # model_dump() trasforma l'oggetto Pydantic in un dizionario facile da leggere
             print(f"   -> {r.model_dump()}", flush=True)
 
     return results

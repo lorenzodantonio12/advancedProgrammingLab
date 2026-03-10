@@ -3,10 +3,10 @@ from typing import Dict, Optional, List, Union
 from datetime import datetime
 
 class StandardFormat(BaseModel):
-    id: str        # Esempio: greenhouse_temperature
-    metric: str    # Esempio: temperature, ph, co2...
+    id: str        
+    metric: str    
     timestamp: datetime
     value: float
     unit: Optional[str] = None
-    origin: str    # La famiglia dello schema (es: rest.scalar.v1)
+    origin: str    
     status: Optional[str] = None

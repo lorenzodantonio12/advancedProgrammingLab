@@ -1,7 +1,6 @@
 import os
 import requests
 
-# In Docker, l'host è il nome del servizio nel compose
 SIMULATOR_HOST = os.getenv("SIMULATOR_HOST", "simulator")
 ACTUATOR_URL = f"http://{SIMULATOR_HOST}:8080/api/actuators"
 

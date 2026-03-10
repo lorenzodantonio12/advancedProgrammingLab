@@ -3,7 +3,6 @@ import time
 from normalizer import map_to_standard
 from broker_client import BrokerClient
 
-# Nota: dentro Docker il simulatore si chiamerà 'simulator'
 BASE_URL = "http://simulator:8080/api/sensors"
 
 SENSORS_TO_POLL = [

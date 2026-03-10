@@ -8,7 +8,6 @@ class ActuatorListener(stomp.ConnectionListener):
     def on_message(self, frame):
         try:
             command = json.loads(frame.body)
-            # Ci aspettiamo un JSON tipo {"actuator": "cooling_fan", "state": "ON"}
             actuator_id = command["actuator"]
             state = command["state"]
             
@@ -17,7 +16,6 @@ class ActuatorListener(stomp.ConnectionListener):
             print(f"Errore processamento comando: {e}")
 
 def start_listening():
-    # Prendi l'host del broker dall'ambiente (default: activemq)
     host = os.getenv("BROKER_HOST", "activemq")
     port = 61613
     
@@ -34,7 +32,6 @@ def start_listening():
             print("Broker non pronto, riprovo tra 2s...")
             time.sleep(2)
 
-    # Loop infinito per mantenere il container attivo
     while True:
         time.sleep(10)
 

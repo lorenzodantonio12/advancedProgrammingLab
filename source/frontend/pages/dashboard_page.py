@@ -21,7 +21,6 @@ def setup_dashboard_page(navigation_bar_func):
         navigation_bar_func()
         
         # --- 1. SENSORI ---
-        # 🟢 TITOLO ANIMATO: Radar pulsante
         with ui.row().classes('w-full justify-center items-center gap-2 mt-6'):
             ui.image('/assets/multiple-sensor.gif').classes('w-16 h-16')
             ui.label('Environmental Sensors').classes('text-2xl font-bold text-gray-800')
@@ -41,7 +40,6 @@ def setup_dashboard_page(navigation_bar_func):
             multi_updaters['water_tank_level'] = MultiSensorWidget('Water Tank', 'waves', 'cyan')
 
         # --- 2. GRAFICI ---
-        # 🟢 TITOLO ANIMATO: Grafico che rimbalza leggermente
         with ui.row().classes('w-full justify-center items-center gap-2 mt-8'):
             ui.image('/assets/wave-graph.gif').classes('w-16 h-16')
             ui.label('Data Graphs').classes('text-2xl font-bold text-gray-800')
@@ -51,7 +49,6 @@ def setup_dashboard_page(navigation_bar_func):
             update_hum_chart = SingleChartFactory('Humidity Graph', 'Humidity', '#3b82f6', '%')
 
         # --- 3. ATTUATORI ---
-        # 🟢 TITOLO ANIMATO: Ingranaggio che gira
         with ui.row().classes('w-full justify-center items-center gap-2 mt-8'):
             ui.image('/assets/switch.gif').classes('w-16 h-16')
             ui.label('Actuators Control').classes('text-2xl font-bold text-gray-800')
@@ -65,7 +62,6 @@ def setup_dashboard_page(navigation_bar_func):
             act_updaters['habitat_heater'] = ActuatorWidget('Heater', 'fireplace', 'orange', 'habitat_heater', act_states.get('habitat_heater', 'OFF'))
 
         # --- 4. TELEMETRIA ---
-        # 🟢 TITOLO ANIMATO: Antenna di trasmissione pulsante
         with ui.row().classes('w-full justify-center items-center gap-2 mt-8'):
             ui.image('/assets/space-station.gif').classes('w-16 h-16')
             ui.label('Live Telemetry').classes('text-2xl font-bold text-gray-800')
@@ -84,7 +80,21 @@ def setup_dashboard_page(navigation_bar_func):
             for eid, (name, icon, col) in tel_defs.items():
                 tel_updaters[eid] = TelemetryWidget(name, icon, col)
         page_client = ui.context.client
-        # --- 🚀 WEBSOCKET LISTENER ---
+
+        # --- MOTORE REGOLE ---
+                        
+        def sync_actuators_ui():
+            try:
+                states = get_initial_actuators_state()
+                for act_id, current_state in states.items():
+                    if act_id in act_updaters:
+                        act_updaters[act_id].update_from_rule(current_state)
+            except Exception as e:
+                pass
+                
+        ui.timer(2.0, sync_actuators_ui)
+        
+        # --- WEBSOCKET LISTENER ---
         async def ws_listener():
             history = get_latest_sensor_data()
             if history:
@@ -138,50 +148,6 @@ def setup_dashboard_page(navigation_bar_func):
                             new_data = extract_telemetry_data(e)
                             tel_updaters[e_id](new_data, status)
 
-                        # --- MOTORE REGOLE ---
-                        current_rules = get_rules()
-                        if current_rules:
-                            for rule in current_rules:
-
-                                rule_sensor = rule.get('sensor_name')
-                                rule_metric = rule.get('metric')
-                                
-                                is_matching_sensor = (rule_sensor == e_id)
-                                is_matching_metric = (not rule_metric or rule_metric == metric)
-
-                                if is_matching_sensor and is_matching_metric:
-                                
-                                    try:
-                                        v_float = float(val)
-                                        target = float(rule.get('value', 0))
-                                    except (ValueError, TypeError):
-                                        continue 
-                                        
-                                    op = rule.get('operator')
-                                    
-                                    triggered = False
-                                    if op == '>': triggered = v_float > target
-                                    elif op == '<': triggered = v_float < target
-                                    elif op == '=': triggered = v_float == target
-                                    elif op == '>=': triggered = v_float >= target
-                                    elif op == '<=': triggered = v_float <= target
-
-                                    if triggered:
-                                        act_id = rule.get('actuator_name')
-                                        target_state = rule.get('state')
-
-                                        if act_id in act_updaters:
-                                            is_on = act_updaters[act_id].switch.value
-                                            current_ui_str = 'ON' if is_on else 'OFF'
-
-                                            if current_ui_str != target_state:
-                                                print(f"⚡ [AUTOMAZIONE] Scatto: {metric}({v_float}) {op} {target} -> {act_id}:{target_state}", flush=True)
-                                                set_actuator_state(act_id, target_state)
-                                                
-                                                # 🟢 FIX 2: Usiamo il 'page_client' che abbiamo salvato fuori dal loop
-                                                with page_client:
-                                                    act_updaters[act_id].update_from_rule(target_state)
-                                                    #ui.notify(f"⚡ Automazione: {act_id.replace('_', ' ').title()} -> {target_state}", color='warning', icon='bolt', position='top')
                         # Feedback Attuatori
                         if e_id in act_updaters:
                             act_updaters[e_id].update_from_rule(str(val))

@@ -6,8 +6,7 @@ class ActuatorWidget:
         self.name = name
         self.actuator_id = actuator_id
         
-        # Converte 'ON'/'OFF' dal backend in True/False per NiceGUI
-        # Se initial_state è None o altro, di default lo mettiamo False (OFF)
+        # Converte 'ON'/'OFF' dal backend in True/False
         start_val = (initial_state == 'ON')
 
         with ui.card().classes('p-4 shadow-lg items-center w-44 flex-col gap-1'):
