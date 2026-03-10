@@ -15,12 +15,33 @@ The Ingestion and Actuation logic has been intentionally distributed across thre
 
 ---
 
+# USER STORIES:
+
+1) As a user, I want to view all the sensors and their live telemetry in a compact dashboard
+2) As a user, I want to see clear visual status indicators for each sensor
+3) As a user, I want to read the real-time values and unit of measurements for every metric
+4) As a user, I want to view historical data charts for key metrics
+5) As a user, I want to view the current state (ON/OFF) of every actuator
+6) As a user, I want to manually toggle the state of the actuators
+7) As a user, I want to be visually notified when an actuator changes state due to a rule
+8) As a user, I want to see a dedicated page with a list of all active automation rules
+9) As a user, I want to create a new rule
+10) As a user, I want to modify the parameters of an existing rule
+11) As a user, I want to delete a rule
+12) As a user, I want all the rules to be saved automatically in a persistent database
+13) As a user, I want the system to automatically block the creation of a new rule if its logic overlaps with an existing one
+14) As a user, I want the system to automatically block the modification of a rule if the updated parameters conflict with another existing rule
+15) As a user, I want to be visually notified when I create, modify or delete a rule
+
 # CONTAINERS:
 
 ## CONTAINER_NAME: rest-poller
 
 ### DESCRIPTION: 
 This container is dedicated to the cyclic polling of the simulator's REST endpoints for discrete environmental sensors. It ensures that low-frequency data is constantly updated.
+
+### USER STORIES:
+1, 2, 3
 
 ### PORTS: 
 None
@@ -34,24 +55,25 @@ Connects to the Simulator microservice via HTTP for data retrieval and to the Ac
 ### MICROSERVICES:
 
 #### MICROSERVICE: rest-poller
-- TYPE: backend
-- DESCRIPTION: Python service that executes scheduled GET requests to the simulator.
-- PORTS: none
-- TECHNOLOGICAL SPECIFICATION:
-Developed in Python 3.12-slim. It uses the `requests` library for HTTP polling and `stomp.py` for asynchronous integration with the message broker.
-- SERVICE ARCHITECTURE: 
-The service implements an infinite loop that, every 5 seconds, iterates over a list of predefined sensors, retrieves the raw JSON, calls the `normalizer.py` module for transformation, and publishes the result to the `mars_telemetry` queue.
+- **TYPE**: backend
+- **DESCRIPTION**: Python service that executes scheduled GET requests to the simulator.
+- **PORTS**: none
+- **TECHNOLOGICAL SPECIFICATION**: Developed in Python 3.12-slim. It uses the `requests` library for HTTP polling and `stomp.py` for asynchronous integration with the message broker.
+- **SERVICE ARCHITECTURE**: The service implements an infinite loop that, every 5 seconds, iterates over a list of predefined sensors, retrieves the raw JSON, calls the `normalizer.py` module for transformation, and publishes the result to the `mars_telemetry` queue.
 
-- ENDPOINTS: 
-		
-	| HTTP METHOD | URL | Description |
-	| ----------- | --- | ----------- |
-    | GET | /api/sensors/{sensor_id} | Retrieves the latest value for a specific environmental sensor |
+- **ENDPOINTS**:
+        
+    | HTTP METHOD | URL | Description | User Stories |
+    | ----------- | --- | ----------- | ------------ |
+    | GET | /api/sensors/{sensor_id} | Retrieves the latest value for a specific environmental sensor | 1, 3 |
 
 ## CONTAINER_NAME: stream-subscriber
 
 ### DESCRIPTION:
 A specialized container for handling persistent HTTP connections (Server-Sent Events) to capture high-frequency technical telemetry produced by the simulator.
+
+### USER STORIES:
+1, 2, 3
 
 ### PORTS: 
 None
@@ -65,24 +87,25 @@ Persistent connection to the Simulator (HTTP Streaming) and STOMP connection to 
 ### MICROSERVICES:
 
 #### MICROSERVICE: stream-subscriber
-- TYPE: backend
-- DESCRIPTION: SSE data stream manager for real-time telemetry.
-- PORTS: none
-- TECHNOLOGICAL SPECIFICATION:
-Python 3.12-slim with support for HTTP streaming. It utilizes `normalizer.py` to map `topic.power.v1` and `topic.environment.v1` contracts.
-- SERVICE ARCHITECTURE: 
-The service initiates separate threads for each telemetry topic (e.g., radiation, solar_array). Each thread maintains an open connection with the simulator, decodes incoming data chunks, and forwards them to the broker after normalization.
+- **TYPE**: backend
+- **DESCRIPTION**: SSE data stream manager for real-time telemetry.
+- **PORTS**: none
+- **TECHNOLOGICAL SPECIFICATION**: Python 3.12-slim with support for HTTP streaming. It utilizes `normalizer.py` to map `topic.power.v1` and `topic.environment.v1` contracts.
+- **SERVICE ARCHITECTURE**: The service initiates separate threads for each telemetry topic (e.g., radiation, solar_array). Each thread maintains an open connection with the simulator, decodes incoming data chunks, and forwards them to the broker after normalization.
 
-- ENDPOINTS: 
+- **ENDPOINTS**: 
 
-	| HTTP METHOD | URL | Description |
-	| ----------- | --- | ----------- |
-    | GET | /api/telemetry/stream/{topic} | Subscription to the SSE stream for a specific technical topic |
+    | HTTP METHOD | URL | Description | User Stories |
+    | ----------- | --- | ----------- | ------------ |
+    | GET | /api/telemetry/stream/{topic} | Subscription to the SSE stream for a specific technical topic | 1, 2 |
 
 ## CONTAINER_NAME: actuator-executor
 
 ### DESCRIPTION: 
 Acts as the system's actuation bridge. It is a pure consumer that waits for instructions from the broker to translate them into physical actions on the simulator.
+
+### USER STORIES:
+5, 6, 7
 
 ### PORTS: 
 None
@@ -96,19 +119,17 @@ STOMP connection to the Broker for command reception and POST requests to the Si
 ### MICROSERVICES:
 
 #### MICROSERVICE: actuator-executor
-- TYPE: backend
-- DESCRIPTION: STOMP consumer for executing commands toward the actuators.
-- PORTS: none
-- TECHNOLOGICAL SPECIFICATION:
-Developed in Python 3.12-slim. It uses `stomp.py` to listen to the `actuator_command` queue.
-- SERVICE ARCHITECTURE: 
-The service implements a `ConnectionListener` that waits for JSON messages on the queue. Upon receiving a command (e.g., `{"id": "cooling_fan", "action": "ON"}`), it performs a REST POST call to the simulator.
+- **TYPE**: backend
+- **DESCRIPTION**: STOMP consumer for executing commands toward the actuators.
+- **PORTS**: none
+- **TECHNOLOGICAL SPECIFICATION**: Developed in Python 3.12-slim. It uses `stomp.py` to listen to the `actuator_command` queue.
+- **SERVICE ARCHITECTURE**: The service implements a `ConnectionListener` that waits for JSON messages on the queue. Upon receiving a command (e.g., `{"actuator": "cooling_fan", "state": "ON"}`), it performs a REST POST call to the simulator.
 
-- ENDPOINTS: 
+- **ENDPOINTS**: 
 
-	| HTTP METHOD | URL | Description |
-	| ----------- | --- | ----------- |
-    | POST | /api/actuators/{id} | Sends the state change command to the specific actuator in the simulator |
+    | HTTP METHOD | URL | Description | User Stories |
+    | ----------- | --- | ----------- | ------------ |
+    | POST | /api/actuators/{id} | Sends the state change command to the specific actuator in the simulator | 6, 7 |
 
 ## CONTAINER_NAME: activemq
 
@@ -127,10 +148,89 @@ No external connections.
 ### MICROSERVICES:
 
 #### MICROSERVICE: activemq
-- TYPE: middleware
-- DESCRIPTION: STOMP broker based on Apache ActiveMQ Classic.
-- PORTS: 61613, 8161
-- TECHNOLOGICAL SPECIFICATION:
-Docker image `apache/activemq-classic:latest`.
-- SERVICE ARCHITECTURE: 
-Manages queues (`actuator_command`) and topics (`mars_telemetry`) for service decoupling.
+- **TYPE**: middleware
+- **DESCRIPTION**: STOMP broker based on Apache ActiveMQ Classic.
+- **PORTS**: 61613, 8161
+- **TECHNOLOGICAL SPECIFICATION**: Docker image `apache/activemq-classic:latest`.
+- **SERVICE ARCHITECTURE**: Manages queues (`actuator_command`) and topics (`mars_telemetry`) for service decoupling.
+
+## CONTAINER_NAME: automation-engine
+
+### DESCRIPTION: 
+This container acts as the central intelligence of the habitat. It manages the persistence of automation rules in a local database, evaluates incoming normalized sensor data against these rules in real-time, and provides a central API gateway for the frontend.
+
+### USER STORIES:
+8, 9, 10, 11, 12, 13, 14
+
+### PORTS: 
+8000:8000
+
+### PERSISTENCE EVALUATION:
+The container manages persistent data using an SQLite database named `mars_rules.db`. The database is stored in a dedicated directory to ensure user-defined automation rules are preserved across container restarts.
+
+### EXTERNAL SERVICES CONNECTIONS:
+Establishes a STOMP connection to the ActiveMQ broker to subscribe to the telemetry topic (`mars_telemetry`) and send commands to the actuation topic (`actuator_command`). It exposes REST endpoints for communication with the `mars-frontend`.
+
+### MICROSERVICES:
+
+#### MICROSERVICE: automation-logic
+- **TYPE**: backend
+- **DESCRIPTION**: An event-driven API server and rules engine based on FastAPI.
+- **PORTS**: 8000
+- **TECHNOLOGICAL SPECIFICATION**: Developed in Python 3.12 using the FastAPI framework. It implements advanced interval-checking logic (`check_overlap`) to prevent conflicting rules.
+- **SERVICE ARCHITECTURE**: The service follows a modular architecture:
+    - **`main.py`**: Defines REST API endpoints.
+    - **`automation_engine.py`**: Matches sensor events to rules and triggers actuator changes.
+    - **`crud.py`**: Handles Create, Read, Update, and Delete operations for the SQLite database.
+    - **`check_interval.py`**: Implements overlap detection for rule parameters.
+
+- **ENDPOINTS**:
+        
+    | HTTP METHOD | URL | Description | User Stories |
+    | ----------- | --- | ----------- | ------------ |
+    | GET | `/api/get-rules` | Retrieves all automation rules from the database | 8 |
+    | POST | `/api/create-rule` | Creates a new rule with anti-conflict validation | 9, 13 |
+    | PATCH | `/api/update-rule/{id}` | Updates parameters of an existing rule with conflict checks | 10, 14 |
+    | DELETE | `/api/delete-rule/{id}` | Permanently removes a rule from the system | 11 |
+
+- **DB STRUCTURE**: 
+
+    **_rules_** : | **_id_rule_** (PK) | sensor_name | operator | value | metric | actuator_name | state |
+
+---
+
+## CONTAINER_NAME: mars-frontend
+
+### DESCRIPTION: 
+Provides the interactive web interface for global habitat supervision. It enables real-time telemetry monitoring, historical trend visualization, and automation configuration.
+
+### USER STORIES:
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 15
+
+### PORTS: 
+8081:8081
+
+### PERSISTENCE EVALUATION:
+The frontend is stateless. Persistence is handled by the `automation-engine`.
+
+### EXTERNAL SERVICES CONNECTIONS:
+HTTP REST connection to the `automation-engine` and a STOMP connection to the ActiveMQ broker.
+
+### MICROSERVICES:
+
+#### MICROSERVICE: frontend-dashboard
+- **TYPE**: frontend
+- **DESCRIPTION**: A multi-page reactive dashboard built with NiceGUI.
+- **PORTS**: 8081
+- **TECHNOLOGICAL SPECIFICATION**: Developed in Python 3.12 with NiceGUI. It integrates Highcharts for time-series data visualization.
+- **SERVICE ARCHITECTURE**: Organized into modular components and pages:
+    - **`dashboard_page.py`**: Main monitoring layout.
+    - **`rules_page.py`**: Full CRUD interface for automation rules.
+    - **`components/`**: Reusable widgets for sensors, telemetry, and actuators.
+
+- **PAGES**: 
+
+    | Name | Description | Related Microservice | User Stories |
+    | ---- | ----------- | -------------------- | ------------ |
+    | Dashboard | Real-time sensor monitoring, technical telemetry, and actuator toggles | automation-logic | 1, 2, 3, 4, 5, 6, 7 |
+    | Rules Engine | Management interface for automation rules with visual notifications | automation-logic | 8, 9, 10, 11, 15 |
