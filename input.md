@@ -1,21 +1,21 @@
 # SYSTEM DESCRIPTION:
 
-Mars Habitat Control is an integrated IoT platform designed to monitor and automate environmental conditions within a simulated Martian habitat. The system acquires heterogeneous telemetry via REST protocols and SSE streams from a simulator, normalizes the data into a single standard format to power an automation rules engine and a real-time web dashboard. The platform ensures habitat safety by evaluating complex automation rules in real-time and allowing for both automatic and manual control of actuators through a centralized message broker.
+Mars Habitat Control is an all-in-one monitoring and automation platform designed to manage life-support conditions in a simulated Martian base. The system acts as an intelligent bridge between the habitat's environment and the crew, collecting vital data such as temperature, radiation levels, and oxygen status. It automatically processes this information to ensure safety, triggering systems when dangerous conditions arise, and provides a real-time visual dashboard for manual supervision.
 
 # USER STORIES:
 
-1) As the User, I want to see environmental REST sensor data (Temp, Humidity, CO2) updated automatically every 5 seconds.
-2) As the User, I want to monitor technical telemetry streams (Radiation, Solar Array) in real-time via persistent SSE connections.
-3) As the User, I want all data, regardless of the source, to be normalized with correct measurement units (e.g., °C, kW, uSv/h).
-4) As the User, I want the system to clean sensor IDs by removing technical prefixes for a clear display on the dashboard.
-5) As the User, I want to be able to send ON/OFF commands to simulated actuators manually from the dashboard.
-6) As the User, I want to see confirmation in the system logs for every command executed by the actuators.
-7) As the User, I want the system to automatically trigger actuators (e.g., cooling fans) when specific sensor thresholds are exceeded.
-8) As the User, I want to visualize all active automation rules in a dedicated section of the dashboard.
-9) As the User, I want to enable or disable specific automation rules without deleting them.
-10) As the User, I want to visualize real-time charts for sensors to identify trends in the habitat's environment.
-11) As the User, I want the dashboard to highlight dangerous conditions (warnings) in red for immediate identification.
-12) As the User, I want to see the total count of active sensors, live telemetries, and active rules in a summary widget.
-13) As the User, I want the system to remain functional and provide telemetry even if one of the ingestion components crashes (Fault Isolation).
-14) As the User, I want all sensor data to be synchronized across the Automation Engine and the Frontend via a shared Message Broker.
-15) As the User, I want to see the exact timestamp of the last received update for each sensor to ensure data freshness.
+1) As a user, I want to view all the sensors and their live telemetry in a compact dashboard
+2) As a user, I want to see clear visual status indicators for each sensor
+3) As a user, I want to read the real-time values and unit of measurements for every metric
+4) As a user, I want to view historical data charts for key metrics
+5) As a user, I want to view the current state (ON/OFF) of every actuator
+6) As a user, I want to manually toggle the state of the actuators
+7) As a user, I want to be visually notified when an actuator changes state due to a rule
+8) As a user, I want to see a dedicated page with a list of all active automation rules
+9) As a user, I want to create a new rule
+10) As a user, I want to modify the parameters of an existing rule
+11) As a user, I want to delete a rule
+12) As a user, I want all the rules to be saved automatically in a persistent database
+13) As a user, I want the system to automatically block the creation of a new rule if its logic overlaps with an existing one
+14) As a user, I want the system to automatically block the modification of a rule if the updated parameters conflict with another existing rule
+15) As a user, I want to be visually notified when I create, modify or delete a rule
