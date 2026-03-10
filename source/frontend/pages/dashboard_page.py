@@ -142,7 +142,15 @@ def setup_dashboard_page(navigation_bar_func):
                         current_rules = get_rules()
                         if current_rules:
                             for rule in current_rules:
-                                if rule.get('sensor_name') in [e_id, metric]:
+
+                                rule_sensor = rule.get('sensor_name')
+                                rule_metric = rule.get('metric')
+                                
+                                is_matching_sensor = (rule_sensor == e_id)
+                                is_matching_metric = (not rule_metric or rule_metric == metric)
+
+                                if is_matching_sensor and is_matching_metric:
+                                
                                     try:
                                         v_float = float(val)
                                         target = float(rule.get('value', 0))
