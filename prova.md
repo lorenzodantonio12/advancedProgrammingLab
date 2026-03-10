@@ -35,6 +35,40 @@ The Ingestion and Actuation logic has been intentionally distributed across thre
 
 # CONTAINERS:
 
+## CONTAINER_NAME: simulator (mars_simulator)
+
+### DESCRIPTION: 
+This container provides the simulated Mars habitat environment. It acts as the primary data source, exposing various sensor metrics via REST and SSE, and accepting state change commands for actuators.
+
+### PORTS: 
+8080:8080
+
+### PERSISTENCE EVALUATION
+The simulator acts as a runtime source of telemetry and transient actuator states; it does not manage persistent application data for the platform.
+
+### EXTERNAL SERVICES CONNECTIONS
+Standalone server that receives incoming HTTP requests from the ingestion and actuation containers and maintains persistent SSE connections.
+
+### MICROSERVICES:
+
+#### MICROSERVICE: simulator
+- **TYPE**: IoT Simulator (External)
+- **DESCRIPTION**: Docker image (`mars-iot-simulator:latest`) providing a realistic IoT simulation of a Martian base.
+- **PORTS**: 8080
+- **TECHNOLOGICAL SPECIFICATION**: Accessible via REST and SSE APIs using defined schema families (e.g., `rest.scalar.v1`, `topic.power.v1`).
+- **SERVICE ARCHITECTURE**: Reactive data provider maintaining internal state for sensors and actuators.
+
+- **ENDPOINTS (Exposed)**: 
+		
+	| HTTP METHOD | URL | Description | User Stories |
+	| ----------- | --- | ----------- | ------------ |
+    | GET | `/api/sensors` | Lists available REST sensors | 1 |
+    | GET | `/api/sensors/{id}` | Returns the latest value for a specific sensor | 1, 3 |
+    | GET | `/api/telemetry/topics` | Lists available SSE topics | 1 |
+    | GET | `/api/telemetry/stream/{topic}` | Provides a persistent SSE stream for high-frequency metrics | 1, 2, 3 |
+    | GET | `/api/actuators` | Lists all actuators and their current states | 5 |
+    | POST | `/api/actuators/{id}` | Updates the state of a specific actuator | 6, 7 |
+
 ## CONTAINER_NAME: rest-poller
 
 ### DESCRIPTION: 
@@ -61,11 +95,11 @@ Connects to the Simulator microservice via HTTP for data retrieval and to the Ac
 - **TECHNOLOGICAL SPECIFICATION**: Developed in Python 3.12-slim. It uses the `requests` library for HTTP polling and `stomp.py` for asynchronous integration with the message broker.
 - **SERVICE ARCHITECTURE**: The service implements an infinite loop that, every 5 seconds, iterates over a list of predefined sensors, retrieves the raw JSON, calls the `normalizer.py` module for transformation, and publishes the result to the `mars_telemetry` queue.
 
-- **ENDPOINTS**:
+- **CONSUMED EXTERNAL ENDPOINTS**:
         
-    | HTTP METHOD | URL | Description | User Stories |
+    | HTTP METHOD | TARGET URL | Description | User Stories |
     | ----------- | --- | ----------- | ------------ |
-    | GET | /api/sensors/{sensor_id} | Retrieves the latest value for a specific environmental sensor | 1, 3 |
+    | GET | `/api/sensors/{sensor_id}` | Polls the latest value for environmental sensors (e.g., Temperature) | 1, 3 |
 
 ## CONTAINER_NAME: stream-subscriber
 
@@ -90,14 +124,14 @@ Persistent connection to the Simulator (HTTP Streaming) and STOMP connection to 
 - **TYPE**: backend
 - **DESCRIPTION**: SSE data stream manager for real-time telemetry.
 - **PORTS**: none
-- **TECHNOLOGICAL SPECIFICATION**: Python 3.12-slim with support for HTTP streaming. It utilizes `normalizer.py` to map `topic.power.v1` and `topic.environment.v1` contracts.
-- **SERVICE ARCHITECTURE**: The service initiates separate threads for each telemetry topic (e.g., radiation, solar_array). Each thread maintains an open connection with the simulator, decodes incoming data chunks, and forwards them to the broker after normalization.
+- **TECHNOLOGICAL SPECIFICATION**: Python 3.12-slim with support for HTTP streaming. It utilizes `normalizer.py` to map incoming technical schemas (e.g., `solar_array`) to internal formats.
+- **SERVICE ARCHITECTURE**: The service initiates separate threads for each telemetry topic. Each thread maintains an open connection with the simulator, decodes incoming data chunks, and forwards them to the broker after normalization.
 
-- **ENDPOINTS**: 
+- **CONSUMED EXTERNAL ENDPOINTS**: 
 
-    | HTTP METHOD | URL | Description | User Stories |
+    | HTTP METHOD | TARGET URL | Description | User Stories |
     | ----------- | --- | ----------- | ------------ |
-    | GET | /api/telemetry/stream/{topic} | Subscription to the SSE stream for a specific technical topic | 1, 2 |
+    | GET | `/api/telemetry/stream/{topic}` | Subscribes to live SSE technical topics (e.g., `solar_array`) | 1, 2 |
 
 ## CONTAINER_NAME: actuator-executor
 
@@ -123,13 +157,13 @@ STOMP connection to the Broker for command reception and POST requests to the Si
 - **DESCRIPTION**: STOMP consumer for executing commands toward the actuators.
 - **PORTS**: none
 - **TECHNOLOGICAL SPECIFICATION**: Developed in Python 3.12-slim. It uses `stomp.py` to listen to the `actuator_command` queue.
-- **SERVICE ARCHITECTURE**: The service implements a `ConnectionListener` that waits for JSON messages on the queue. Upon receiving a command (e.g., `{"actuator": "cooling_fan", "state": "ON"}`), it performs a REST POST call to the simulator.
+- **SERVICE ARCHITECTURE**: The service implements a `ConnectionListener` that waits for JSON messages on the queue. Upon receiving a command, it performs a REST POST call to the simulator.
 
-- **ENDPOINTS**: 
+- **CONSUMED EXTERNAL ENDPOINTS**: 
 
-    | HTTP METHOD | URL | Description | User Stories |
+    | HTTP METHOD | TARGET URL | Description | User Stories |
     | ----------- | --- | ----------- | ------------ |
-    | POST | /api/actuators/{id} | Sends the state change command to the specific actuator in the simulator | 6, 7 |
+    | POST | `/api/actuators/{id}` | Sends state updates (e.g., `{"state": "ON"}`) to the Simulator | 6, 7 |
 
 ## CONTAINER_NAME: activemq
 
@@ -166,7 +200,7 @@ This container acts as the central intelligence of the habitat. It manages the p
 8000:8000
 
 ### PERSISTENCE EVALUATION:
-The container manages persistent data using an SQLite database named `mars_rules.db`. The database is stored in a dedicated directory to ensure user-defined automation rules are preserved across container restarts.
+The container manages persistent data using an SQLite database named `mars_rules.db` to ensure that user-defined automation rules are preserved across container restarts.
 
 ### EXTERNAL SERVICES CONNECTIONS:
 Establishes a STOMP connection to the ActiveMQ broker to subscribe to the telemetry topic (`mars_telemetry`) and send commands to the actuation topic (`actuator_command`). It exposes REST endpoints for communication with the `mars-frontend`.
